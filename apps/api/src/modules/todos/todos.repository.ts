@@ -1,7 +1,7 @@
 import { db, eq, todos } from '@/database';
 import { Inject, Injectable } from '@nestjs/common';
 import { DATABASE } from '@/database/database.module';
-import { Todo } from '@/todos/todos.entity';
+import { Todo } from './todos.entity';
 
 @Injectable()
 export class TodosRepository {

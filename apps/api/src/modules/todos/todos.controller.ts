@@ -19,10 +19,10 @@ import {
     ApiTags,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '@/common/error.dto';
-import { CreateTodoDto } from '@/todos/dto/create-todo.dto';
-import { EditTodoDto } from '@/todos/dto/edit-todo.dto';
-import { TodoResponseDto } from '@/todos/dto/todo-response.dto';
-import { TodosService } from '@/todos/todos.service';
+import { CreateTodoDto } from './dto/create-todo.dto';
+import { EditTodoDto } from './dto/edit-todo.dto';
+import { TodoResponseDto } from './dto/todo-response.dto';
+import { TodosService } from './todos.service';
 
 @ApiTags('Todos')
 @Controller('todos')

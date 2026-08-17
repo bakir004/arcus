@@ -1,8 +1,8 @@
-import { Module } from '@nestjs/common';
-import { TodosController } from '@/todos/todos.controller';
-import { TodosRepository } from '@/todos/todos.repository';
-import { TodosService } from '@/todos/todos.service';
 import { DatabaseModule } from '@/database/database.module';
+import { Module } from '@nestjs/common';
+import { TodosController } from './todos.controller';
+import { TodosRepository } from './todos.repository';
+import { TodosService } from './todos.service';
 
 @Module({
     imports: [DatabaseModule],

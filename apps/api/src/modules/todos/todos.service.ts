@@ -1,9 +1,9 @@
-import { CreateTodoDto } from '@/todos/dto/create-todo.dto';
-import { EditTodoDto } from '@/todos/dto/edit-todo.dto';
-import { Todo } from '@/todos/todos.entity';
-import { TodoNotFound } from '@/todos/todos.errors';
-import { TodosRepository } from '@/todos/todos.repository';
 import { Injectable } from '@nestjs/common';
+import { CreateTodoDto } from './dto/create-todo.dto';
+import { EditTodoDto } from './dto/edit-todo.dto';
+import { Todo } from './todos.entity';
+import { TodoNotFound } from './todos.errors';
+import { TodosRepository } from './todos.repository';
 
 @Injectable()
 export class TodosService {

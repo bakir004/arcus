@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Todo } from '@/todos/todos.entity';
+import { Todo } from '../todos.entity';
 
 export class TodoResponseDto {
     @ApiProperty({ example: '6f8d4d1e-7d1b-4f6c-9b25-2f4e3b9d6a10' })
