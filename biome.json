@@ -12,14 +12,17 @@
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
-    "indentWidth": 2,
+    "indentWidth": 4,
     "lineEnding": "lf",
     "attributePosition": "auto"
   },
   "linter": {
     "enabled": true,
     "rules": {
-      "preset": "recommended"
+      "preset": "recommended",
+      "style": {
+        "useImportType": "off"
+      }
     }
   },
   "assist": {
