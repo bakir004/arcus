@@ -1,0 +1,14 @@
+{
+  "name": "@repo/embedder",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun run src/main.ts",
+    "build": "tsc --noEmit",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@repo/contracts": "workspace:*"
+  }
+}

@@ -1,0 +1,13 @@
+# Dependencies (at any level)
+**/node_modules/
+
+# Build and generated output (at any level)
+**/dist/
+**/build/
+**/coverage/
+**/.turbo/
+
+# Environment files
+.env
+.env.*
+!.env.sample

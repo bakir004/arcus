@@ -1,0 +1,25 @@
+{
+  "name": "my-monorepo",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "bun --cwd apps/api dev",
+    "dev:frontend": "bun --cwd apps/frontend dev",
+    "dev:executor": "bun --cwd apps/executor dev",
+    "dev:embedder": "bun --cwd apps/embedder dev",
+    "build": "bun run --filter '*' build",
+    "test": "bun run --filter '*' test",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "lint": "biome lint .",
+    "check": "biome check .",
+    "typecheck": "bun run --filter \"@repo/api\" typecheck"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.8"
+  }
+}
