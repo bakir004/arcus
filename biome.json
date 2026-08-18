@@ -6,7 +6,10 @@
       "packages/**",
       "!**/dist",
       "!**/coverage",
-      "!**/node_modules"
+      "!**/node_modules",
+      "!**/routeTree.gen.ts",
+      "!**/.cta.json",
+      "!**/src/components/ui/**"
     ]
   },
   "formatter": {
@@ -30,6 +33,11 @@
       "source": {
         "organizeImports": "off"
       }
+    }
+  },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
     }
   },
   "javascript": {
