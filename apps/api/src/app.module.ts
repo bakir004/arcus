@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { TodosModule } from '@/todos/todos.module';
 import { DatabaseModule } from '@/database/database.module';
+import { TodosModule } from './modules/todos/todos.module';
 
 @Module({
     imports: [DatabaseModule, TodosModule],

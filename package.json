@@ -8,6 +8,8 @@
   ],
   "scripts": {
     "db": "bash scripts/start-db.sh",
+    "api": "bun --cwd apps/api dev",
+    "frontend": "bun --cwd apps/frontend dev",
     "dev:api": "bun --cwd apps/api dev",
     "dev:frontend": "bun --cwd apps/frontend dev",
     "dev:executor": "bun --cwd apps/executor dev",

@@ -21,7 +21,7 @@ services:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
     env_file:
-      - .env
+      - apps/api/.env
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}

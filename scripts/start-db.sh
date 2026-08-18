@@ -6,7 +6,7 @@ log() {
 }
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-COMPOSE=(docker compose -f "${ROOT_DIR}/docker-compose.yml")
+COMPOSE=(docker compose --env-file "${ROOT_DIR}/apps/api/.env" -f "${ROOT_DIR}/docker-compose.yml")
 PG_CONTAINER="arcus-postgres"
 
 if docker ps --format '{{.Names}}' | grep -q "^${PG_CONTAINER}$"; then
