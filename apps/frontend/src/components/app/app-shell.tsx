@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { Link } from '@tanstack/react-router';
 import { useGetCourse } from '@/features/courses/api/get-course';
-import { useGetCourseAssignment } from '@/features/courses/api/get-course-assignment';
 import { Box, Group, ThemeToggle } from '@/components/common';
 import {
     Breadcrumb,
@@ -29,13 +28,10 @@ function AppShellHeader({ pathname }: { pathname: string }) {
     const isCourseRoute = segments[0] === 'courses';
     const courseId = isCourseRoute ? segments[1] : undefined;
     const section = isCourseRoute ? segments[2] : undefined;
-    const assignmentId = isCourseRoute && section === 'assignments' ? segments[3] : undefined;
     const { data: course } = useGetCourse(courseId ?? '');
-    const { data: assignment } = useGetCourseAssignment(courseId ?? '', assignmentId ?? '');
     const page = formatBreadcrumbSegment(segments.at(-1) ?? '');
     const coursePage = course?.name ?? 'Course';
     const sectionPage = section ? formatBreadcrumbSegment(section) : null;
-    const assignmentPage = assignmentId ? (assignment?.title ?? 'Assignment') : null;
 
     return (
         <Box
@@ -74,26 +70,7 @@ function AppShellHeader({ pathname }: { pathname: string }) {
                                         <>
                                             <BreadcrumbSeparator />
                                             <BreadcrumbItem>
-                                                {assignmentPage ? (
-                                                    <BreadcrumbLink asChild>
-                                                        <Link
-                                                            to={'/courses/$courseId/assignments' as never}
-                                                            params={{ courseId } as never}
-                                                        >
-                                                            {sectionPage}
-                                                        </Link>
-                                                    </BreadcrumbLink>
-                                                ) : (
-                                                    <BreadcrumbPage>{sectionPage}</BreadcrumbPage>
-                                                )}
-                                            </BreadcrumbItem>
-                                        </>
-                                    ) : null}
-                                    {assignmentPage ? (
-                                        <>
-                                            <BreadcrumbSeparator />
-                                            <BreadcrumbItem>
-                                                <BreadcrumbPage>{assignmentPage}</BreadcrumbPage>
+                                                <BreadcrumbPage>{sectionPage}</BreadcrumbPage>
                                             </BreadcrumbItem>
                                         </>
                                     ) : null}

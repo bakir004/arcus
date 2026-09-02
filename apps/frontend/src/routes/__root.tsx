@@ -34,7 +34,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             <body className="antialiased">
                 <QueryClientProvider client={queryClient}>
                     <TooltipProvider>
-                        <AppShell pathname={pathname}>{children}</AppShell>
+                        {pathname === '/login' ? children : <AppShell pathname={pathname}>{children}</AppShell>}
                     </TooltipProvider>
                 </QueryClientProvider>
                 <Scripts />

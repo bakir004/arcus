@@ -8,6 +8,7 @@ export type CourseSeed = Omit<typeof courses.$inferInsert, 'id' | 'createdById'>
     id: string;
     adminRoleId: string;
     restrictedAdminRoleId: string;
+    studentRoleId: string;
 };
 
 export const courseSeeds: CourseSeed[] = [
@@ -18,6 +19,7 @@ export const courseSeeds: CourseSeed[] = [
         facultyId,
         adminRoleId: '00000000-0000-4000-8000-000000000201',
         restrictedAdminRoleId: '00000000-0000-4000-8000-000000000301',
+        studentRoleId: '00000000-0000-4000-8000-000000000401',
     },
     {
         id: '00000000-0000-4000-8000-000000000002',
@@ -26,6 +28,7 @@ export const courseSeeds: CourseSeed[] = [
         facultyId,
         adminRoleId: '00000000-0000-4000-8000-000000000202',
         restrictedAdminRoleId: '00000000-0000-4000-8000-000000000302',
+        studentRoleId: '00000000-0000-4000-8000-000000000402',
     },
     {
         id: '00000000-0000-4000-8000-000000000003',
@@ -34,6 +37,7 @@ export const courseSeeds: CourseSeed[] = [
         facultyId,
         adminRoleId: '00000000-0000-4000-8000-000000000203',
         restrictedAdminRoleId: '00000000-0000-4000-8000-000000000303',
+        studentRoleId: '00000000-0000-4000-8000-000000000403',
     },
     {
         id: '00000000-0000-4000-8000-000000000004',
@@ -42,6 +46,7 @@ export const courseSeeds: CourseSeed[] = [
         facultyId,
         adminRoleId: '00000000-0000-4000-8000-000000000204',
         restrictedAdminRoleId: '00000000-0000-4000-8000-000000000304',
+        studentRoleId: '00000000-0000-4000-8000-000000000404',
     },
 ];
 
@@ -51,3 +56,17 @@ export const courseAdminPermissions: Permission[] = Object.values(Permissions);
 export const courseRestrictedAdminPermissions = courseAdminPermissions.filter(
     (permission) => permission !== Permissions.ExamCreate && permission !== Permissions.ExamUpdate,
 );
+export const courseStudentRoleName = 'Student';
+export const courseStudentPermissions: Permission[] = [
+    Permissions.CourseRead,
+    Permissions.CourseMaterialRead,
+    Permissions.AssignmentRead,
+    Permissions.AssignmentSubmit,
+    Permissions.ExamRead,
+    Permissions.QuestionRead,
+    Permissions.AttemptCreate,
+    Permissions.AttemptRead,
+    Permissions.AttemptSubmit,
+    Permissions.AnswerSave,
+    Permissions.AnswerReadOwn,
+];

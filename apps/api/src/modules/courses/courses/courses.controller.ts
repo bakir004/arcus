@@ -11,7 +11,7 @@ import {
     Post,
     UseGuards,
 } from '@nestjs/common';
-import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
+import { OptionalAuth, Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import {
     ApiBadRequestResponse,
     ApiCreatedResponse,
@@ -23,10 +23,12 @@ import {
     ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import type { auth } from '@/auth';
+import { AuthzService } from '@/authz/authz.service';
 import { Permissions } from '@/authz/permissions';
 import { PermissionsGuard } from '@/authz/permissions.guard';
 import { RequirePermission } from '@/authz/require-permission.decorator';
 import { ErrorDto } from '@/common/error.dto';
+import { MeResponseDto } from '@/common/me.controller';
 import { CreateCourseDto, CourseResponseDto, UpdateCourseDto } from '@/modules/courses/courses/courses.dto';
 import type { Course } from '@/modules/courses/courses/courses.entity';
 import { CoursesService } from '@/modules/courses/courses/courses.service';
@@ -34,7 +36,10 @@ import { CoursesService } from '@/modules/courses/courses/courses.service';
 @ApiTags('Courses')
 @Controller({ path: 'courses', version: '1' })
 export class CoursesController {
-    constructor(private readonly coursesService: CoursesService) {}
+    constructor(
+        private readonly coursesService: CoursesService,
+        private readonly authzService: AuthzService,
+    ) {}
 
     private toResponse(value: Course): CourseResponseDto {
         return {
@@ -63,6 +68,34 @@ export class CoursesController {
     async findAll(): Promise<CourseResponseDto[]> {
         const courses = await this.coursesService.findAll();
         return courses.map((course) => this.toResponse(course));
+    }
+
+    @ApiOperation({ summary: 'Get current user course membership, roles, and permissions' })
+    @ApiOkResponse({ description: 'Current user course context or null.', type: MeResponseDto })
+    @Get(':id/me')
+    @OptionalAuth()
+    async findMe(
+        @Param('id', ParseUUIDPipe) id: string,
+        @Session() session: UserSession<typeof auth> | null,
+    ): Promise<MeResponseDto | null> {
+        if (!session) return null;
+
+        // Check that the course exists so an invalid course id is not indistinguishable
+        // from a valid course for which the user has no membership.
+        await this.coursesService.findById(id);
+        const context = await this.authzService.getCourseAuthzContext(session.user.id, id);
+
+        return {
+            user: {
+                id: session.user.id,
+                name: session.user.name,
+                email: session.user.email,
+                image: session.user.image,
+            },
+            session: session.session,
+            roles: context.roles,
+            permissions: context.permissions,
+        };
     }
 
     @ApiOperation({ summary: 'Get a course by id' })

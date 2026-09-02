@@ -36,6 +36,31 @@ export class AuthzRepository {
             .innerJoin(courseRolePermissions, eq(courseRolePermissions.courseRoleId, courseRoles.id))
             .where(eq(courseMembers.userId, userId));
 
+        return this.toAuthzContext(rows);
+    }
+
+    async getCourseAuthzContext(userId: string, courseId: string): Promise<UserAuthzContext> {
+        const rows = await this.db
+            .select({
+                role: courseRoles.name,
+                permission: courseRolePermissions.permissionKey,
+            })
+            .from(courseMembers)
+            .innerJoin(courseMemberRoles, eq(courseMemberRoles.courseMemberId, courseMembers.id))
+            .innerJoin(courseRoles, eq(courseRoles.id, courseMemberRoles.courseRoleId))
+            .innerJoin(courseRolePermissions, eq(courseRolePermissions.courseRoleId, courseRoles.id))
+            .where(
+                and(
+                    eq(courseMembers.userId, userId),
+                    eq(courseMembers.courseId, courseId),
+                    eq(courseRoles.courseId, courseId),
+                ),
+            );
+
+        return this.toAuthzContext(rows);
+    }
+
+    private toAuthzContext(rows: { role: string; permission: string }[]): UserAuthzContext {
         return {
             roles: [...new Set(rows.map((row) => row.role))].sort(),
             permissions: [...new Set(rows.map((row) => row.permission))].sort(),

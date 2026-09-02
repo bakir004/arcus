@@ -18,4 +18,8 @@ export class AuthzService {
     getUserAuthzContext(userId: string): Promise<UserAuthzContext> {
         return this.authzRepository.getUserAuthzContext(userId);
     }
+
+    getCourseAuthzContext(userId: string, courseId: string): Promise<UserAuthzContext> {
+        return this.authzRepository.getCourseAuthzContext(userId, courseId);
+    }
 }

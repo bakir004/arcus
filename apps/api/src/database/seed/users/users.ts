@@ -45,4 +45,4 @@ export const userSeeds: UserSeed[] = names.map((name, index) => ({
 }));
 
 export const professorEmail = emailForName('Bakir Cinjarevic');
-export const restrictedExamEditorEmail = emailForName('Imran Vlajcic');
+export const studentEmail = emailForName('Imran Vlajcic');
