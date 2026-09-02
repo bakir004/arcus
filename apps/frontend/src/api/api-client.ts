@@ -1,9 +1,6 @@
+/** API origin/prefix shared by browser and frontend-server requests. */
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
 const API_VERSION = import.meta.env.VITE_API_VERSION ?? 'v1';
-
-function trimSlashes(value: string): string {
-    return value.replace(/^\/+|\/+$/g, '');
-}
 
 interface ApiOptions extends Omit<RequestInit, 'body'> {
     body?: unknown;
@@ -11,56 +8,71 @@ interface ApiOptions extends Omit<RequestInit, 'body'> {
     responseType?: 'json' | 'blob';
 }
 
-export async function apiClient<T>(
-    endpoint: string,
-    { body, method, params, responseType, ...customConfig }: ApiOptions = {},
-): Promise<T> {
-    const headers = new Headers(customConfig.headers);
-    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
-    if (body && !isFormData && !headers.has('Content-Type')) {
-        headers.set('Content-Type', 'application/json');
-    }
+/** Removes boundary slashes so URL segments can be joined predictably. */
+function trimSlashes(value: string): string {
+    return value.replace(/^\/+|\/+$/g, '');
+}
 
-    if (import.meta.env.SSR) {
-        const { getServerRequestHeader } = await import('./api-client.server');
-        const cookie = getServerRequestHeader('cookie');
-        if (cookie && !headers.has('cookie')) {
-            headers.set('cookie', cookie);
-        }
-    }
+/** Serializes non-null query parameters for the API URL. */
+function buildQueryString(params?: Record<string, unknown>): string {
+    if (!params) return '';
 
-    let queryString = '';
-    if (params) {
-        const cleanParams = Object.fromEntries(
-            Object.entries(params)
-                .filter(([, v]) => v != null)
-                .map(([k, v]) => [k, String(v)]),
-        );
-        queryString = `?${new URLSearchParams(cleanParams).toString()}`;
-    }
+    const cleanParams = Object.fromEntries(
+        Object.entries(params)
+            .filter(([, value]) => value != null)
+            .map(([key, value]) => [key, String(value)]),
+    );
 
-    const config: RequestInit = {
+    return `?${new URLSearchParams(cleanParams).toString()}`;
+}
+
+/**
+ * Resolves a relative base URL for Node's fetch during SSR.
+ * Browsers resolve `/api` against the current origin automatically; Node fetch does not.
+ */
+async function resolveServerBaseUrl(baseUrl: string): Promise<string> {
+    if (!import.meta.env.SSR || !baseUrl.startsWith('/')) return baseUrl;
+
+    const { getServerRequestHeader } = await import('./api-client.server');
+    const protocol =
+        getServerRequestHeader('x-forwarded-proto') ??
+        (getServerRequestHeader('host')?.includes('localhost') ? 'http' : 'https');
+    const host = getServerRequestHeader('x-forwarded-host') ?? getServerRequestHeader('host') ?? 'localhost:3000';
+
+    return `${protocol}://${host}${baseUrl}`;
+}
+
+/**
+ * Forwards the browser request cookie when this code runs on the frontend server.
+ * Browser requests let fetch attach cookies through `credentials: include` instead.
+ */
+async function forwardServerCookie(headers: Headers): Promise<void> {
+    if (!import.meta.env.SSR || headers.has('cookie')) return;
+
+    const { getServerRequestHeader } = await import('./api-client.server');
+    const cookie = getServerRequestHeader('cookie');
+    if (cookie) headers.set('cookie', cookie);
+}
+
+/** Builds the RequestInit object without coupling URL or auth concerns to it. */
+function buildRequestConfig(
+    headers: Headers,
+    body: unknown,
+    method: string | undefined,
+    customConfig: Omit<ApiOptions, 'body' | 'params' | 'responseType'>,
+    isFormData: boolean,
+): RequestInit {
+    return {
         method: method ?? (body ? 'POST' : 'GET'),
         credentials: customConfig.credentials ?? 'include',
         ...customConfig,
         headers,
-        ...(body ? { body: isFormData ? body : JSON.stringify(body) } : {}),
+        ...(body ? { body: isFormData ? (body as FormData) : JSON.stringify(body) } : {}),
     };
+}
 
-    let baseUrl = BASE_URL;
-    if (import.meta.env.SSR && BASE_URL.startsWith('/')) {
-        const { getServerRequestHeader } = await import('./api-client.server');
-        const proto =
-            getServerRequestHeader('x-forwarded-proto') ??
-            (getServerRequestHeader('host')?.includes('localhost') ? 'http' : 'https');
-        const host = getServerRequestHeader('x-forwarded-host') ?? getServerRequestHeader('host') ?? 'localhost:3000';
-        baseUrl = `${proto}://${host}${BASE_URL}`;
-    }
-
-    const url = `${baseUrl}/${trimSlashes(API_VERSION)}${endpoint}${queryString}`;
-
-    const response = await fetch(url, config);
-
+/** Converts successful responses to the requested type and normalizes API errors. */
+async function parseResponse<T>(response: Response, responseType?: ApiOptions['responseType']): Promise<T> {
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         return Promise.reject({ status: response.status, ...errorData });
@@ -69,4 +81,31 @@ export async function apiClient<T>(
     if (response.status === 204) return {} as T;
     if (responseType === 'blob') return (await response.blob()) as unknown as T;
     return response.json() as Promise<T>;
+}
+
+/**
+ * Calls the API from either the browser or the frontend server.
+ *
+ * Browser flow: `credentials: include` asks the browser to attach its cookie.
+ * Server flow: the incoming browser cookie is explicitly copied to the API request,
+ * because Node has no browser cookie jar. Relative URLs are also made absolute for Node.
+ */
+export async function apiClient<T>(
+    endpoint: string,
+    { body, method, params, responseType, ...customConfig }: ApiOptions = {},
+): Promise<T> {
+    const headers = new Headers(customConfig.headers);
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+
+    if (body && !isFormData && !headers.has('Content-Type')) {
+        headers.set('Content-Type', 'application/json');
+    }
+
+    await forwardServerCookie(headers);
+
+    const baseUrl = await resolveServerBaseUrl(BASE_URL);
+    const url = `${baseUrl}/${trimSlashes(API_VERSION)}${endpoint}${buildQueryString(params)}`;
+    const config = buildRequestConfig(headers, body, method, customConfig, isFormData);
+
+    return parseResponse<T>(await fetch(url, config), responseType);
 }
