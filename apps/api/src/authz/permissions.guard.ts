@@ -4,6 +4,7 @@ import {
     ExecutionContext,
     ForbiddenException,
     Injectable,
+    Logger,
     UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
@@ -14,6 +15,8 @@ import { RequirePermission } from '@/authz/require-permission.decorator';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
+    private readonly logger = new Logger(PermissionsGuard.name);
+
     constructor(
         private readonly reflector: Reflector,
         private readonly authzService: AuthzService,
@@ -29,7 +32,29 @@ export class PermissionsGuard implements CanActivate {
 
         const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
         const session = request.session;
-        if (!session) throw new UnauthorizedException();
+        this.logger.log(
+            JSON.stringify({
+                method: request.method,
+                path: request.originalUrl ?? request.url,
+                hasSession: Boolean(session),
+                userId: session?.user.id ?? null,
+                userEmail: session?.user.email ?? null,
+                requirement,
+            }),
+        );
+        if (!session) {
+            this.logger.warn(
+                JSON.stringify({
+                    message: 'No session found',
+                    userId: null,
+                    userEmail: null,
+                    path: request.originalUrl ?? request.url,
+                    method: request.method,
+                    requirement,
+                })
+            )
+            throw new UnauthorizedException();
+        }
 
         const scopeId = request.params[requirement.routeParam];
         if (typeof scopeId !== 'string' || !isUUID(scopeId)) {
@@ -42,6 +67,17 @@ export class PermissionsGuard implements CanActivate {
             scopeId,
             permissions: requirement.permissions,
         });
+
+        this.logger.log(
+            JSON.stringify({
+                userId: session.user.id,
+                scope: requirement.scope,
+                scopeId,
+                requestedPermissions: requirement.permissions,
+                grantedPermissions: permissions,
+                allowed: permissions.length > 0,
+            }),
+        );
 
         if (permissions.length === 0) throw new ForbiddenException();
 

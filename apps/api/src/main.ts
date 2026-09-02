@@ -1,9 +1,10 @@
-import { ConsoleLogger, ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { VersioningType } from '@nestjs/common/enums/version-type.enum';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import path from 'node:path';
 import dotenv from 'dotenv';
+import type { Request, Response } from 'express';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 import { AppModule } from '@/app.module';
@@ -20,20 +21,15 @@ async function bootstrap() {
         .split(',')
         .map((origin) => origin.trim())
         .filter(Boolean);
-    const useJsonLogs =
-        config.get<string>('LOG_FORMAT') === 'json' ||
-        (config.get<string>('NODE_ENV') ?? 'development') === 'production';
-    const logger = new ConsoleLogger({
-        json: useJsonLogs,
-        colors: !useJsonLogs,
-    });
     const app = await NestFactory.create(AppModule, {
-        logger,
         bodyParser: false,
     });
 
     app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
     app.useGlobalFilters(new HttpExceptionFilter());
+    app.getHttpAdapter().get('/favicon.ico', (_request: Request, response: Response) => {
+        response.status(204).end();
+    });
     app.enableCors({ origin: corsOrigins, credentials: true });
     app.enableVersioning({
         type: VersioningType.URI,
@@ -43,8 +39,8 @@ async function bootstrap() {
 
     await setupSwagger(app);
     await app.listen(port);
-    logger.log(`API running at http://localhost:${port}`, 'Bootstrap');
-    logger.log(`API reference at http://localhost:${port}/reference`, 'Bootstrap');
+    Logger.log(`API running at http://localhost:${port}`, 'Bootstrap');
+    Logger.log(`API reference at http://localhost:${port}/reference`, 'Bootstrap');
 }
 
 bootstrap();

@@ -1,0 +1,722 @@
+#include "app/Application.h"
+#include "assets/AssetImporter.h"
+#include "scene/Scene.h"
+#include "scene/FrameSubmission.h"
+#include "scene/RenderItem.h"
+#include "core/Camera.h"
+#include "utils/Options.h"
+#include "core/Material.h"
+#include "core/Renderer.h"
+#include "core/RenderConfig.h"
+#include "core/ShaderProgram.h"
+#include "core/FullscreenQuad.h"
+#include "core/InputManager.h"
+#include "core/MouseInput.h"
+#include "ui/RendererUI.h"
+#include <glad/glad.h>
+#include <imgui.h>
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_opengl3.h>
+#include <GLFW/glfw3.h>
+#include <glm/geometric.hpp>
+#include <glm/gtc/constants.hpp>
+#include <cstdint>
+#include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
+#include <algorithm>
+#include <chrono>
+#include <string>
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GLFW callbacks
+// ─────────────────────────────────────────────────────────────────────────────
+
+// NOTE: We no longer resize the renderer directly from the framebuffer callback
+// because the renderer viewport is a sub-region of the window (sidebar excluded).
+// RendererUI::Draw() calls renderer.Resize(vpW, vpH) each frame instead.
+// We keep the callback only to handle GL context invalidation on some platforms.
+static void framebuffer_size_callback(GLFWwindow * /*window*/, int /*w*/, int /*h*/)
+{
+    // Intentionally empty — resize is driven by RendererUI each frame.
+}
+
+static void scroll_callback(GLFWwindow *window, double /*xoff*/, double yoff)
+{
+    auto *app = static_cast<Application *>(glfwGetWindowUserPointer(window));
+    if (!app || !app->GetInputManager())
+        return;
+    app->GetInputManager()->GetMouse().OnScroll(static_cast<float>(yoff));
+}
+
+namespace
+{
+    using CpuClock = std::chrono::steady_clock;
+
+    float ElapsedMilliseconds(CpuClock::time_point start)
+    {
+        const auto elapsed = CpuClock::now() - start;
+        return std::chrono::duration<float, std::milli>(elapsed).count();
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Ctor / Dtor
+// ─────────────────────────────────────────────────────────────────────────────
+Application::Application()
+    : m_renderer(std::make_unique<Renderer>()), m_ui(std::make_unique<RendererUI>())
+{
+}
+
+Application::~Application()
+{
+    m_fullscreenQuad.reset();
+    m_toneMappingShader.reset();
+    m_brightPassShader.reset();
+    m_gaussianBlurShader.reset();
+
+    if (m_brightPassFbo != 0)
+    {
+        glDeleteFramebuffers(1, &m_brightPassFbo);
+        m_brightPassFbo = 0;
+    }
+    if (m_brightPassTexture != 0)
+    {
+        glDeleteTextures(1, &m_brightPassTexture);
+        m_brightPassTexture = 0;
+    }
+    if (m_blurPingPongFbos[0] != 0 || m_blurPingPongFbos[1] != 0)
+    {
+        glDeleteFramebuffers(2, m_blurPingPongFbos);
+        m_blurPingPongFbos[0] = 0;
+        m_blurPingPongFbos[1] = 0;
+    }
+    if (m_blurPingPongTextures[0] != 0 || m_blurPingPongTextures[1] != 0)
+    {
+        glDeleteTextures(2, m_blurPingPongTextures);
+        m_blurPingPongTextures[0] = 0;
+        m_blurPingPongTextures[1] = 0;
+    }
+
+    if (m_imguiInitialized)
+    {
+        ImGui_ImplOpenGL3_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+        ImGui::DestroyContext();
+        m_imguiInitialized = false;
+    }
+
+    m_renderer->Shutdown();
+    if (m_window)
+    {
+        glfwDestroyWindow(m_window);
+        m_window = nullptr;
+    }
+    glfwTerminate();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Initialize
+// ─────────────────────────────────────────────────────────────────────────────
+bool Application::Initialize()
+{
+#ifndef NDEBUG
+    spdlog::set_level(spdlog::level::debug);
+#endif
+    if (!glfwInit())
+    {
+        spdlog::error("[Application] glfwInit() failed");
+        return false;
+    }
+
+    Options options("config/settings.json");
+
+#ifndef NDEBUG
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
+#endif
+    glfwWindowHint(GLFW_SRGB_CAPABLE, GLFW_TRUE);
+
+    struct GLVer
+    {
+        int major, minor;
+    };
+    const GLVer versions[] = {{4, 6}, {4, 5}, {4, 4}, {4, 3}, {4, 2}, {4, 1}, {4, 0}, {3, 3}};
+    int cMaj = 0, cMin = 0;
+    for (const auto &v : versions)
+    {
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, v.major);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, v.minor);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+        glfwWindowHint(GLFW_DEPTH_BITS, 24);
+        m_window = glfwCreateWindow(options.window.width, options.window.height,
+                                    options.window.title.c_str(), nullptr, nullptr);
+        if (m_window)
+        {
+            cMaj = v.major;
+            cMin = v.minor;
+            break;
+        }
+    }
+    if (!m_window)
+    {
+        spdlog::error("[Application] Failed to create GLFW window (tried GL 4.6–3.3)");
+        glfwTerminate();
+        return false;
+    }
+
+    spdlog::info("[Application] Window created ({}x{}, OpenGL {}.{} Core Profile)",
+        options.window.width, options.window.height, cMaj, cMin);
+
+    glfwMakeContextCurrent(m_window);
+    glfwSetWindowUserPointer(m_window, this);
+    glfwSetFramebufferSizeCallback(m_window, framebuffer_size_callback);
+    glfwSetScrollCallback(m_window, scroll_callback);
+
+    if (!m_renderer->Initialize())
+        return false;
+    m_toneMappingShader = std::make_unique<ShaderProgram>(
+        "assets/shaders/tone_mapping.vert", "assets/shaders/tone_mapping.frag");
+    m_brightPassShader = std::make_unique<ShaderProgram>(
+        "assets/shaders/tone_mapping.vert", "assets/shaders/bright_pass.frag");
+    m_gaussianBlurShader = std::make_unique<ShaderProgram>(
+        "assets/shaders/tone_mapping.vert", "assets/shaders/gaussian_blur.frag");
+    m_fullscreenQuad = std::make_unique<FullscreenQuad>();
+
+    m_input = std::make_unique<InputManager>(m_window);
+
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui::StyleColorsDark();
+
+    if (!ImGui_ImplGlfw_InitForOpenGL(m_window, true) ||
+        !ImGui_ImplOpenGL3_Init("#version 330"))
+    {
+        spdlog::warn("[Application] ImGui init failed — UI disabled");
+        ImGui_ImplGlfw_Shutdown();
+        ImGui::DestroyContext();
+    }
+    else
+    {
+        m_imguiInitialized = true;
+        spdlog::info("[Application] ImGui debug overlay initialized");
+    }
+
+    return true;
+}
+
+void Application::GetFramebufferSize(int &w, int &h) const
+{
+    glfwGetFramebufferSize(m_window, &w, &h);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RunFrame  — single shared frame body used by both Run() overloads
+// ─────────────────────────────────────────────────────────────────────────────
+void Application::RunFrame(Scene &scene,
+                           const std::vector<Scene *> &scenes,
+                           std::size_t &activeSceneIndex)
+{
+    glfwPollEvents();
+    m_input->Update();
+
+    int fbW = 0, fbH = 0;
+    GetFramebufferSize(fbW, fbH);
+
+    const float now = static_cast<float>(glfwGetTime());
+    const float dt = (m_lastFrameTime > 0.f) ? (now - m_lastFrameTime) : 0.f;
+    m_lastFrameTime = now;
+
+    scene.InternalUpdate(dt, *m_input, fbW, fbH);
+
+    // Build submission
+    FrameSubmission sub;
+    scene.BuildSubmission(sub);
+    sub.time = now;
+    sub.deltaTime = dt;
+
+    // Use the viewport rect computed by RendererUI (sidebar already excluded).
+    // GL's glViewport origin is bottom-left, so:
+    //   x = sidebar + handle width  (pixels from left)
+    //   y = 0                       (bottom of framebuffer; topbar is ImGui-only)
+    //   w, h = remaining area
+    // On the very first frame m_ui viewport equals (0,0,fbW,fbH) which is fine.
+    int vpX, vpY, vpW, vpH;
+    m_ui->GetViewportRect(vpX, vpY, vpW, vpH);
+    sub.clearInfo.viewport = {
+        vpX, 0, // y=0: GL bottom-left origin
+        vpW > 0 ? vpW : fbW,
+        vpH > 0 ? vpH : fbH};
+
+    m_renderer->SetIBLDebugState(m_ui->iblDebugMode, m_ui->iblDebugPrefilteredMip);
+    m_renderer->SetLightingDebugControls(m_ui->ambientFloorStrength, m_ui->maxShadowOcclusion);
+    RenderConfig renderConfig;
+    renderConfig.frustumCullingEnabled = m_ui->frustumCullingEnabled;
+    m_renderer->SetRenderConfig(renderConfig);
+    m_renderer->BeginFrame(sub);
+    for (const auto &item : sub.objects)
+    {
+        RenderItem di = item;
+        if (m_ui->wireframeOverride)
+            di.drawMode = DrawMode::Wireframe;
+        if (di.material)
+        {
+            const_cast<MaterialInstance *>(di.material)->SetUseNormalMap(m_ui->normalMapOverride);
+        }
+        m_renderer->SubmitDraw(di);
+    }
+
+    m_renderer->EndFrame();
+    // Rebind the HDR FBO so that OnPostRender draws (instanced vegetation etc.)
+    // land in the buffer that RenderPostProcess reads, not in the default FBO
+    // which EndFrame unbinds to.
+    m_renderer->RebindHdrFramebuffer();
+    scene.OnPostRender();
+    // RenderPostProcess immediately binds its own FBOs and reads the HDR texture
+    // by GL texture ID, so the HDR FBO being bound here is not a problem.
+    const auto postProcessStart = CpuClock::now();
+    RenderPostProcess(sub.clearInfo.viewport.x,
+                      sub.clearInfo.viewport.y,
+                      sub.clearInfo.viewport.width,
+                      sub.clearInfo.viewport.height);
+    m_renderer->RecordDebugPassTiming(RendererPassTimingId::PostProcess,
+                                      ElapsedMilliseconds(postProcessStart));
+
+    // ── ImGui ─────────────────────────────────────────────────────────────────
+    if (m_imguiInitialized)
+    {
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        // RendererUI::Draw() also calls renderer.Resize(vpW, vpH) internally
+        // so the GL viewport stays correct even as the sidebar is resized.
+        m_ui->Draw(fbW, fbH, scene, *m_renderer, &m_input->GetMouse(),
+                   scenes, activeSceneIndex);
+
+        scene.OnImGuiRender();
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    }
+
+    glfwSwapBuffers(m_window);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Update  (single-scene variant called by external custom loops)
+// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// RenderPostProcess: bright-pass extraction + tone mapping
+// ─────────────────────────────────────────────────────────────────────────────
+void Application::RenderPostProcess(int x, int y, int width, int height)
+{
+    if (!m_toneMappingShader || !m_toneMappingShader->IsValid() ||
+        !m_brightPassShader || !m_brightPassShader->IsValid() ||
+        !m_fullscreenQuad || width <= 0 || height <= 0)
+    {
+        return;
+    }
+
+    const RendererDebugStats &stats = m_renderer->GetDebugStats();
+    if (stats.hdrColorTextureId == 0)
+    {
+        return;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Bright-pass extraction: read HDR color, extract bright contribution
+    // ─────────────────────────────────────────────────────────────────────────
+    const uint32_t vpW = static_cast<uint32_t>(width);
+    const uint32_t vpH = static_cast<uint32_t>(height);
+
+    // Create or resize bright-pass FBO + texture
+    if (m_brightPassWidth != vpW || m_brightPassHeight != vpH)
+    {
+        if (m_brightPassFbo != 0)
+        {
+            glDeleteFramebuffers(1, &m_brightPassFbo);
+            m_brightPassFbo = 0;
+        }
+        if (m_brightPassTexture != 0)
+        {
+            glDeleteTextures(1, &m_brightPassTexture);
+            m_brightPassTexture = 0;
+        }
+
+        // Create floating-point color texture (GL_RGBA16F)
+        glGenTextures(1, &m_brightPassTexture);
+        glBindTexture(GL_TEXTURE_2D, m_brightPassTexture);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F,
+                     static_cast<GLsizei>(vpW), static_cast<GLsizei>(vpH),
+                     0, GL_RGBA, GL_FLOAT, nullptr);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        // Create FBO and attach color texture
+        glGenFramebuffers(1, &m_brightPassFbo);
+        glBindFramebuffer(GL_FRAMEBUFFER, m_brightPassFbo);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                               m_brightPassTexture, 0);
+
+        const GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        if (status != GL_FRAMEBUFFER_COMPLETE)
+        {
+            spdlog::error("[Application] Bright-pass FBO incomplete (status=0x{:X})",
+                          static_cast<uint32_t>(status));
+        }
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        m_brightPassWidth = vpW;
+        m_brightPassHeight = vpH;
+        spdlog::info("[Application] Created bright-pass FBO ({}x{})", vpW, vpH);
+    }
+
+    // Render bright-pass to FBO
+    if (m_brightPassFbo != 0)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, m_brightPassFbo);
+        glViewport(0, 0, static_cast<GLsizei>(vpW), static_cast<GLsizei>(vpH));
+        glDisable(GL_DEPTH_TEST);
+        glDepthMask(GL_FALSE);
+        glDisable(GL_BLEND);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        m_brightPassShader->Bind();
+        m_brightPassShader->SetUniform("u_HdrColor", 0);
+        m_brightPassShader->SetUniform("u_Threshold",  m_ui->bloomThreshold);
+        m_brightPassShader->SetUniform("u_SoftKnee",
+                                       m_ui->bloomSoftThreshold ? m_ui->bloomSoftKnee : 0.0f);
+        m_brightPassShader->SetUniform("u_Exposure",   m_ui->exposure);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, stats.hdrColorTextureId);
+        m_fullscreenQuad->Draw();
+        glBindTexture(GL_TEXTURE_2D, 0);
+        ShaderProgram::Unbind();
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Gaussian blur (Person 8): ping-pong between two floating-point targets
+    // using separable horizontal/vertical passes.
+    // ─────────────────────────────────────────────────────────────────────────
+    if (m_blurWidth != vpW || m_blurHeight != vpH)
+    {
+        if (m_blurPingPongFbos[0] != 0 || m_blurPingPongFbos[1] != 0)
+        {
+            glDeleteFramebuffers(2, m_blurPingPongFbos);
+            m_blurPingPongFbos[0] = 0;
+            m_blurPingPongFbos[1] = 0;
+        }
+        if (m_blurPingPongTextures[0] != 0 || m_blurPingPongTextures[1] != 0)
+        {
+            glDeleteTextures(2, m_blurPingPongTextures);
+            m_blurPingPongTextures[0] = 0;
+            m_blurPingPongTextures[1] = 0;
+        }
+
+        glGenFramebuffers(2, m_blurPingPongFbos);
+        glGenTextures(2, m_blurPingPongTextures);
+
+        bool blurTargetsValid = true;
+        for (int i = 0; i < 2; ++i)
+        {
+            glBindTexture(GL_TEXTURE_2D, m_blurPingPongTextures[i]);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F,
+                         static_cast<GLsizei>(vpW), static_cast<GLsizei>(vpH),
+                         0, GL_RGBA, GL_FLOAT, nullptr);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+            glBindFramebuffer(GL_FRAMEBUFFER, m_blurPingPongFbos[i]);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                                   GL_TEXTURE_2D, m_blurPingPongTextures[i], 0);
+            const GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+            if (status != GL_FRAMEBUFFER_COMPLETE)
+            {
+                spdlog::error("[Application] Gaussian blur ping-pong FBO {} incomplete (status=0x{:X})",
+                              i, static_cast<uint32_t>(status));
+                blurTargetsValid = false;
+            }
+        }
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        if (blurTargetsValid)
+        {
+            m_blurWidth = vpW;
+            m_blurHeight = vpH;
+            spdlog::info("[Application] Created Gaussian blur ping-pong FBOs ({}x{})", vpW, vpH);
+        }
+        else
+        {
+            glDeleteFramebuffers(2, m_blurPingPongFbos);
+            glDeleteTextures(2, m_blurPingPongTextures);
+            m_blurPingPongFbos[0] = 0;
+            m_blurPingPongFbos[1] = 0;
+            m_blurPingPongTextures[0] = 0;
+            m_blurPingPongTextures[1] = 0;
+            m_blurWidth = 0;
+            m_blurHeight = 0;
+        }
+    }
+
+    const int blurPassCount = std::clamp(m_ui->bloomBlurIterations, 1, 10);
+    if (m_gaussianBlurShader && m_gaussianBlurShader->IsValid() &&
+        m_blurPingPongFbos[0] != 0 && m_blurPingPongFbos[1] != 0 &&
+        m_blurPingPongTextures[0] != 0 && m_blurPingPongTextures[1] != 0)
+    {
+        bool horizontal = true;
+        bool firstIteration = true;
+
+        glDisable(GL_DEPTH_TEST);
+        glDepthMask(GL_FALSE);
+        glDisable(GL_BLEND);
+
+        m_gaussianBlurShader->Bind();
+        m_gaussianBlurShader->SetUniform("u_Image", 0);
+        m_gaussianBlurShader->SetUniform("u_Radius", m_ui->bloomRadius);
+
+        for (int i = 0; i < blurPassCount; ++i)
+        {
+            const int targetIndex = horizontal ? 0 : 1;
+            glBindFramebuffer(GL_FRAMEBUFFER, m_blurPingPongFbos[targetIndex]);
+            glViewport(0, 0, static_cast<GLsizei>(vpW), static_cast<GLsizei>(vpH));
+            glClear(GL_COLOR_BUFFER_BIT);
+
+            m_gaussianBlurShader->SetUniform("u_Horizontal", horizontal ? 1 : 0);
+
+            const uint32_t sourceTexture = firstIteration
+                                               ? m_brightPassTexture
+                                               : m_blurPingPongTextures[horizontal ? 1 : 0];
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, sourceTexture);
+            m_fullscreenQuad->Draw();
+
+            horizontal = !horizontal;
+            firstIteration = false;
+        }
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+        ShaderProgram::Unbind();
+    }
+
+    const uint32_t blurredBloomTexture = (blurPassCount % 2 == 1)
+                                             ? m_blurPingPongTextures[0]
+                                             : m_blurPingPongTextures[1];
+    const bool hasBlurredBloom = blurredBloomTexture != 0;
+    const bool hasBrightPass = m_brightPassTexture != 0;
+    const int debugView = std::clamp(m_ui->postFxDebugView, 0, 4);
+
+    uint32_t bloomInputForComposite = hasBlurredBloom ? blurredBloomTexture : stats.hdrColorTextureId;
+    if (debugView == 2 && hasBrightPass)
+    {
+        // Bright-pass debug mode uses slot 1 as the inspection source.
+        bloomInputForComposite = m_brightPassTexture;
+    }
+    else if (debugView == 3 && hasBlurredBloom)
+    {
+        bloomInputForComposite = blurredBloomTexture;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Final post-process composite: bloom in HDR + tone mapping to screen.
+    // ─────────────────────────────────────────────────────────────────────────
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(x, y, width, height);
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+    glDisable(GL_BLEND);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    m_toneMappingShader->Bind();
+    m_toneMappingShader->SetUniform("u_HdrBuffer",           0);
+    m_toneMappingShader->SetUniform("u_BloomBlur",           1);
+    m_toneMappingShader->SetUniform("u_BloomStrength",       m_ui->bloomStrength);
+    m_toneMappingShader->SetUniform("u_BloomEnabled",        m_ui->bloomEnabled && hasBlurredBloom);
+    m_toneMappingShader->SetUniform("u_ToneMappingOperator", m_ui->tonemapOperator);
+    m_toneMappingShader->SetUniform("u_Exposure",            m_ui->exposure);
+    m_toneMappingShader->SetUniform("u_ToneMappingEnabled",  m_ui->tonemapEnabled);
+    m_toneMappingShader->SetUniform("u_DebugView",           debugView);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, stats.hdrColorTextureId);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, bloomInputForComposite);
+    glEnable(GL_FRAMEBUFFER_SRGB);
+    m_fullscreenQuad->Draw();
+    glDisable(GL_FRAMEBUFFER_SRGB);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    ShaderProgram::Unbind();
+
+    glDepthMask(GL_TRUE);
+    glEnable(GL_DEPTH_TEST);
+}
+
+
+void Application::Update(Scene &scene)
+{
+    std::vector<Scene *> sv = {&scene};
+    std::size_t idx = 0;
+    RunFrame(scene, sv, idx);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Run (single scene)
+// ─────────────────────────────────────────────────────────────────────────────
+void Application::Run(Scene &scene)
+{
+    std::vector<Scene *> sv = {&scene};
+    std::size_t idx = 0;
+    while (!glfwWindowShouldClose(m_window))
+    {
+        RunFrame(scene, sv, idx);
+        RunHotKeys();
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Run (multiple scenes, keyboard 1–9 + topbar buttons switch scenes)
+// ─────────────────────────────────────────────────────────────────────────────
+void Application::Run(const std::vector<Scene *> &scenes, std::size_t initialIdx)
+{
+    m_scenes = scenes;
+
+    if (m_scenes.empty())
+    {
+        spdlog::warn("[Application] No scenes");
+        return;
+    }
+
+    m_activeSceneIndex = std::min(initialIdx, m_scenes.size() - 1);
+
+    // ensure valid non-null scene
+    while (m_activeSceneIndex < m_scenes.size() && !m_scenes[m_activeSceneIndex])
+        ++m_activeSceneIndex;
+
+    if (m_activeSceneIndex >= m_scenes.size())
+    {
+        spdlog::warn("[Application] All scenes null");
+        return;
+    }
+
+    spdlog::info("[Application] Starting at scene {}", m_activeSceneIndex);
+
+    while (!glfwWindowShouldClose(m_window))
+    {
+        Scene *scene = m_scenes[m_activeSceneIndex];
+        if (!scene)
+            continue;
+
+        RunFrame(*scene, m_scenes, m_activeSceneIndex);
+
+        // keyboard scene switching
+        const std::size_t maxK = std::min<std::size_t>(9, m_scenes.size());
+        for (std::size_t i = 0; i < maxK; ++i)
+        {
+            if (!m_scenes[i])
+                continue;
+
+            if (m_input->IsKeyPressed(GLFW_KEY_1 + static_cast<int>(i)) &&
+                m_activeSceneIndex != i)
+            {
+                m_activeSceneIndex = i;
+                spdlog::info("[Application] Switched to scene {} (key {})", i, i + 1);
+                break;
+            }
+        }
+
+        RunHotKeys();
+    }
+}
+
+void Application::RunHotKeys()
+{
+    if (m_input->IsKeyPressed(GLFW_KEY_F11))
+    {
+        ToggleFullscreen();
+        spdlog::info("[Application] Toggle fullscreen: {}", m_fullscreen);
+    }
+
+    if (m_input->IsKeyPressed(GLFW_KEY_X))
+    {
+        m_ui->showSidebar = !m_ui->showSidebar;
+        spdlog::debug("[Application] Toggle sidebar (inspector): {}", m_ui->showSidebar);
+    }
+
+    if (m_input->IsKeyPressed(GLFW_KEY_Y))
+    {
+        m_ui->wireframeOverride = !m_ui->wireframeOverride;
+        spdlog::debug("[Application] Toggle wireframe mode: {}", m_ui->wireframeOverride);
+    }
+
+    if (m_input->IsKeyPressed(GLFW_KEY_H))
+    {
+        m_ui->showHelpWindow = !m_ui->showHelpWindow;
+        spdlog::debug("[Application] Toggle help window: {}", m_ui->showHelpWindow);
+    }
+
+    if (m_input->IsKeyPressed(GLFW_KEY_N))
+    {
+        m_ui->normalMapOverride = !m_ui->normalMapOverride;
+        spdlog::debug("[Application] Toggle normal maps: {}", m_ui->normalMapOverride);
+    }
+    if (m_input->IsKeyPressed(GLFW_KEY_K))
+    {
+        m_ui->skyboxOverride = !m_ui->skyboxOverride;
+        m_scenes[m_activeSceneIndex]->SetSkyboxVisible(m_ui->skyboxOverride);
+        spdlog::debug("[Application] Toggle skybox: {}", m_ui->skyboxOverride);
+    }
+
+    if (m_input->IsKeyPressed(GLFW_KEY_C))
+    {
+        Camera &cam = m_scenes[m_activeSceneIndex]->GetCamera();
+
+        CameraMode mode = cam.GetMode();
+        mode = static_cast<CameraMode>((static_cast<int>(mode) + 1) % 3);
+
+        cam.SetMode(mode);
+        spdlog::debug("[Application] Toggle camera mode: {}", static_cast<int>(mode));
+    }
+}
+
+void Application::ToggleFullscreen()
+{
+    m_fullscreen = !m_fullscreen;
+
+    if (m_fullscreen)
+    {
+        // Save windowed position + size
+        glfwGetWindowPos(m_window, &m_windowedX, &m_windowedY);
+        glfwGetWindowSize(m_window, &m_windowedW, &m_windowedH);
+
+        GLFWmonitor *monitor = glfwGetPrimaryMonitor();
+        const GLFWvidmode *mode = glfwGetVideoMode(monitor);
+
+        glfwSetWindowMonitor(
+            m_window,
+            monitor,
+            0, 0,
+            mode->width,
+            mode->height,
+            mode->refreshRate);
+    }
+    else
+    {
+        glfwSetWindowMonitor(
+            m_window,
+            nullptr,
+            m_windowedX,
+            m_windowedY,
+            m_windowedW,
+            m_windowedH,
+            0);
+    }
+}

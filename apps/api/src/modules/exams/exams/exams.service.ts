@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { mapZodErrorToBadRequest } from '@/common/zod-parse';
 import { CreateExamDto, UpdateExamDto } from '@/modules/exams/exams/exams.dto';
 import { createExamSchema, updateExamSchema } from '@/modules/exams/exams/exams.entity';
 import { ExamsRepository } from '@/modules/exams/exams/exams.repository';
@@ -9,9 +8,7 @@ export class ExamsService {
     constructor(private readonly examsRepository: ExamsRepository) {}
 
     create(courseId: string, createdById: string, dto: CreateExamDto) {
-        const result = createExamSchema.safeParse(dto);
-        if (!result.success) throw mapZodErrorToBadRequest(result.error);
-        const data = result.data;
+        const data = createExamSchema.parse(dto);
         return this.examsRepository.create(courseId, createdById, data);
     }
 
@@ -24,9 +21,7 @@ export class ExamsService {
     }
 
     update(courseId: string, id: string, dto: UpdateExamDto) {
-        const result = updateExamSchema.safeParse(dto);
-        if (!result.success) throw mapZodErrorToBadRequest(result.error);
-        const data = result.data;
+        const data = updateExamSchema.parse(dto);
         return this.examsRepository.update(courseId, id, data);
     }
 

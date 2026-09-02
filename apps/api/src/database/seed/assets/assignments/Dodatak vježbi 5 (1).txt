@@ -1,0 +1,39 @@
+INSTALACIJA AD:
+
+Add features -> Active Directory Domain Services
+
+Promote this server to domain controller -> add forest (test.com) -> next... -> install -> restart server
+
+Na Windows mašini otvoriti cmd i provjeriti ipconfig. IP adresa mora doæi od Windows Server DHCP-a i za Connection-specific DNS sufix mora pisati ime domene.
+
+na Windows mašini (u ovom sluèaju Windows 7): Control Panel -> System and Security -> System -> provjeriti verziju Windows-a (home, professional...), te naziv
+
+DODAVANJE USERA NA DOMENU:
+
+Na serveru: Tools -> Active Directory Users and Computers -> desni klik na Users -> new user
+
+DODAVANJE RACUNARA NA DOMENU:
+
+Ponovo na Windows mašini: System -> Change settings -> Network ID -> next... -> ukucati username i password od nekog usera na domeni, te naziv domene -> unijeti eljeni
+naziv racunara te ponovo naziv domene -> unijeti account sa privilegijama dodavanja (moze isti account) -> next -> selektovati Administrator opciju -> next -> finish.
+
+Provjeriti na serveru: Tools -> Active Directory Users and Computers -> Computers
+
+LOGIN: naziv domene\account
+
+DODAVANJE GRUPE:
+
+Na serveru: Tools -> Active Directory Users and Computers -> desni klik na Users -> new Group
+
+DODAVANJE USERA U GRUPU:
+
+Na serveru: Tools -> Active Directory Users and Computers -> Users -> Add to a Group
+
+DODAVANJE SHARED FOLDERA:
+
+File and Storage Services -> Shares -> Tasks(SHARES) -> New Share ...
+
+
+
+
+

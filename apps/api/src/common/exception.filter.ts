@@ -1,5 +1,6 @@
 import {
     ArgumentsHost,
+    BadRequestException,
     Catch,
     ExceptionFilter,
     HttpException,
@@ -7,6 +8,7 @@ import {
     ServiceUnavailableException,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
+import { ZodError } from 'zod';
 import { ErrorResponseDto } from '@/common/error.dto';
 
 @Catch()
@@ -15,11 +17,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     catch(exception: unknown, host: ArgumentsHost): void {
         const httpException =
-            exception instanceof HttpException
-                ? exception
-                : this.isDatabaseUnavailable(exception)
-                  ? new ServiceUnavailableException('Database is unavailable')
-                  : new HttpException('Internal server error', 500);
+            exception instanceof ZodError
+                ? new BadRequestException(this.formatZodIssues(exception))
+                : exception instanceof HttpException
+                  ? exception
+                  : this.isDatabaseUnavailable(exception)
+                    ? new ServiceUnavailableException('Database is unavailable')
+                    : new HttpException('Internal server error', 500);
         const response = host.switchToHttp().getResponse<Response>();
         const statusCode = httpException.getStatus();
         const exceptionResponse = httpException.getResponse();
@@ -38,7 +42,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
             statusCode,
         };
         const request = host.switchToHttp().getRequest<Request>();
-        this.logger.error(
+        this.logger.warn(
             JSON.stringify({
                 message: 'HTTP exception',
                 error: errorResponse.error,
@@ -49,6 +53,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
             }),
         );
         response.status(statusCode).json(errorResponse);
+    }
+
+    private formatZodIssues(error: ZodError): string[] {
+        return error.issues.map((issue) => {
+            const path = issue.path.length > 0 ? `${issue.path.join('.')}: ` : '';
+            const message = `${path}${issue.message}`;
+            return `${message.charAt(0).toUpperCase()}${message.slice(1)}`;
+        });
     }
 
     private isDatabaseUnavailable(error: unknown): boolean {
