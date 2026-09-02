@@ -50,5 +50,13 @@
       "trailingCommas": "all",
       "semicolons": "always"
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["apps/frontend/**/*.css"],
+      "linter": {
+        "enabled": false
+      }
+    }
+  ]
 }

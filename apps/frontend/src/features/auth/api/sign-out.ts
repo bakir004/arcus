@@ -1,7 +1,3 @@
 import { apiClient } from '@/api/api-client';
 
-export function signOut() {
-    return apiClient<Record<string, unknown>>('/auth/sign-out', {
-        method: 'POST',
-    });
-}
+export const signOut = () => apiClient<Record<string, unknown>>('/auth/sign-out', { method: 'POST' });

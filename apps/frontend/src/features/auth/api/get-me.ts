@@ -13,17 +13,11 @@ export interface GlobalMeResponse {
     permissions?: string[];
 }
 
-export const meQueryKey = ['auth', 'me'] as const;
-
-export function getMeRequest() {
-    return apiClient<GlobalMeResponse>('/me', {
-        method: 'GET',
-    });
-}
+export const getMeRequest = () => apiClient<GlobalMeResponse>('/me', { method: 'GET' });
 
 export const useGetMe = () =>
     useQuery<GlobalMeResponse>({
-        queryKey: meQueryKey,
+        queryKey: ['auth', 'me'],
         queryFn: () => getMeRequest(),
         staleTime: 5 * 60 * 1000,
         retry: 1,
