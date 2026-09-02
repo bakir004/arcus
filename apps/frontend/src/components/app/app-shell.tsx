@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { Link } from '@tanstack/react-router';
-import { useGetCourse } from '#/features/courses/api/get-course';
-import { useGetCourseAssignment } from '#/features/courses/api/get-course-assignment';
-import { Box, Group, ThemeToggle } from '#/components/common';
+import { useGetCourse } from '@/features/courses/api/get-course';
+import { useGetCourseAssignment } from '@/features/courses/api/get-course-assignment';
+import { Box, Group, ThemeToggle } from '@/components/common';
 import {
     Breadcrumb,
     BreadcrumbItem,
@@ -10,9 +10,9 @@ import {
     BreadcrumbList,
     BreadcrumbPage,
     BreadcrumbSeparator,
-} from '#/components/ui/breadcrumb';
-import { Separator } from '#/components/ui/separator';
-import { SidebarInset, SidebarProvider, SidebarTrigger } from '#/components/ui/sidebar';
+} from '@/components/ui/breadcrumb';
+import { Separator } from '@/components/ui/separator';
+import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from './app-sidebar';
 
 function formatBreadcrumbSegment(segment: string) {

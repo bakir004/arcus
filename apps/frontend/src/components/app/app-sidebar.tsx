@@ -12,8 +12,8 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-} from '#/components/ui/sidebar.tsx';
-import { useGetCourses } from '#/features/courses/api/get-courses';
+} from '@/components/ui/sidebar.tsx';
+import { useGetCourses } from '@/features/courses/api/get-courses';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { BookOpenIcon, GraduationCapIcon, LifeBuoyIcon, SendIcon, TerminalIcon } from 'lucide-react';
 

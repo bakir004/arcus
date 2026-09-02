@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '#/lib/api-client';
-import type { CourseAssignment } from '#/features/courses/api/get-course-assignments';
+import { apiClient } from '@/api/api-client';
+import type { CourseAssignment } from '@/features/courses/api/get-course-assignments';
 
 export const getCourseAssignmentRequest = (courseId: string, assignmentId: string): Promise<CourseAssignment> =>
     apiClient<CourseAssignment>(`/courses/${courseId}/assignments/${assignmentId}`);

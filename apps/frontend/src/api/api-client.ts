@@ -70,5 +70,3 @@ export async function apiClient<T>(
     if (responseType === 'blob') return (await response.blob()) as unknown as T;
     return response.json() as Promise<T>;
 }
-
-/* CI retrigger: frontend build */

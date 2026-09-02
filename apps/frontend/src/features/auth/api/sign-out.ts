@@ -1,4 +1,4 @@
-import { apiClient } from '#/lib/api-client';
+import { apiClient } from '@/api/api-client';
 
 export function signOut() {
     return apiClient<Record<string, unknown>>('/auth/sign-out', {

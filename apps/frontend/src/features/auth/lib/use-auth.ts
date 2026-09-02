@@ -1,5 +1,5 @@
-import { useGetMe } from '#/features/auth/api/get-me';
-import { isProfessorRole, isStudentRole } from '#/features/auth/lib/roles';
+import { useGetMe } from '@/features/auth/api/get-me';
+import { isProfessorRole, isStudentRole } from '@/features/auth/lib/roles';
 
 export function useAuth() {
     const query = useGetMe();

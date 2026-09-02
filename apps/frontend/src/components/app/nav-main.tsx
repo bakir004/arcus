@@ -6,7 +6,7 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
-} from '#/components/ui/sidebar.tsx';
+} from '@/components/ui/sidebar.tsx';
 
 export function NavMain({
     items,

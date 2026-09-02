@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { apiClient } from '#/lib/api-client';
+import { apiClient } from '@/api/api-client';
 
 export interface AssignmentFile {
     id: string;

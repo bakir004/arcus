@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { Avatar, AvatarFallback, AvatarImage } from '#/components/ui/avatar.tsx';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar.tsx';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -12,10 +12,10 @@ import {
     DropdownMenuLabel,
     DropdownMenuSeparator,
     DropdownMenuTrigger,
-} from '#/components/ui/dropdown-menu.tsx';
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '#/components/ui/sidebar.tsx';
-import { signOut } from '#/features/auth/api/sign-out';
-import { useAuth } from '#/features/auth/lib/use-auth';
+} from '@/components/ui/dropdown-menu.tsx';
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar } from '@/components/ui/sidebar.tsx';
+import { signOut } from '@/features/auth/api/sign-out';
+import { useAuth } from '@/features/auth/lib/use-auth';
 import { ChevronsUpDownIcon, SparklesIcon, BadgeCheckIcon, CreditCardIcon, BellIcon, LogOutIcon } from 'lucide-react';
 
 function getInitials(name?: string | null, email?: string | null) {
