@@ -36,9 +36,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
     const courseItems = (courses ?? []).map((course) => ({
         title: course.name,
-        url: `/courses/${course.id}`,
+        url: `/courses/${course.code}`,
         icon: <BookOpenIcon />,
-        isActive: pathname === `/courses/${course.id}` || pathname.startsWith(`/courses/${course.id}/`),
+        isActive: pathname === `/courses/${course.code}` || pathname.startsWith(`/courses/${course.code}/`),
     }));
 
     return (

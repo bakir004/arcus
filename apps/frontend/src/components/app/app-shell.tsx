@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Link } from '@tanstack/react-router';
-import { useGetCourse } from '@/features/courses/api/get-course';
+import { useGetCourses } from '@/features/courses/api/get-courses';
 import { Box, Group, ThemeToggle } from '@/components/common';
 import {
     Breadcrumb,
@@ -26,9 +26,10 @@ function formatBreadcrumbSegment(segment: string) {
 function AppShellHeader({ pathname }: { pathname: string }) {
     const segments = pathname.split('/').filter(Boolean);
     const isCourseRoute = segments[0] === 'courses';
-    const courseId = isCourseRoute ? segments[1] : undefined;
+    const courseCode = isCourseRoute ? segments[1] : undefined;
     const section = isCourseRoute ? segments[2] : undefined;
-    const { data: course } = useGetCourse(courseId ?? '');
+    const { data: courses } = useGetCourses();
+    const course = courses?.find((candidate) => candidate.code === courseCode);
     const page = formatBreadcrumbSegment(segments.at(-1) ?? '');
     const coursePage = course?.name ?? 'Course';
     const sectionPage = section ? formatBreadcrumbSegment(section) : null;
@@ -47,7 +48,7 @@ function AppShellHeader({ pathname }: { pathname: string }) {
                     />
                     <Breadcrumb>
                         <BreadcrumbList>
-                            {isCourseRoute && courseId ? (
+                            {isCourseRoute && courseCode ? (
                                 <>
                                     <BreadcrumbItem className="hidden md:block">
                                         <BreadcrumbLink asChild>
@@ -58,7 +59,7 @@ function AppShellHeader({ pathname }: { pathname: string }) {
                                     <BreadcrumbItem>
                                         {sectionPage ? (
                                             <BreadcrumbLink asChild>
-                                                <Link to={'/courses/$courseId' as never} params={{ courseId } as never}>
+                                                <Link to="/courses/$code" params={{ code: courseCode }}>
                                                     {coursePage}
                                                 </Link>
                                             </BreadcrumbLink>
