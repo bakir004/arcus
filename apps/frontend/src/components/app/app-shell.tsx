@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Link } from '@tanstack/react-router';
-import { useGetCourses } from '@/features/courses/api/get-courses';
+import { useGetCourseByCode } from '@/features/courses/api/get-course';
 import { Box, Group, ThemeToggle } from '@/components/common';
 import {
     Breadcrumb,
@@ -28,8 +28,7 @@ function AppShellHeader({ pathname }: { pathname: string }) {
     const isCourseRoute = segments[0] === 'courses';
     const courseCode = isCourseRoute ? segments[1] : undefined;
     const section = isCourseRoute ? segments[2] : undefined;
-    const { data: courses } = useGetCourses();
-    const course = courses?.find((candidate) => candidate.code === courseCode);
+    const { data: course } = useGetCourseByCode(courseCode ?? '');
     const page = formatBreadcrumbSegment(segments.at(-1) ?? '');
     const coursePage = course?.name ?? 'Course';
     const sectionPage = section ? formatBreadcrumbSegment(section) : null;

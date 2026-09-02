@@ -98,6 +98,15 @@ export class CoursesController {
         };
     }
 
+    @ApiOperation({ summary: 'Get a course by code' })
+    @ApiOkResponse({ type: CourseResponseDto })
+    @ApiNotFoundResponse({ type: ErrorDto })
+    @Get('code/:code')
+    async findByCode(@Param('code') code: string): Promise<CourseResponseDto> {
+        const course = await this.coursesService.findByCode(code);
+        return this.toResponse(course);
+    }
+
     @ApiOperation({ summary: 'Get a course by id' })
     @ApiOkResponse({ type: CourseResponseDto })
     @ApiBadRequestResponse({ type: ErrorDto })

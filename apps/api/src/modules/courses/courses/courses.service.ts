@@ -20,6 +20,10 @@ export class CoursesService {
         return this.coursesRepository.findById(id);
     }
 
+    findByCode(code: string) {
+        return this.coursesRepository.findByCode(code);
+    }
+
     update(id: string, dto: UpdateCourseDto) {
         const data = updateCourseSchema.parse(dto);
         return this.coursesRepository.update(id, data);

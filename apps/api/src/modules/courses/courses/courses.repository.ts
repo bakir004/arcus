@@ -33,6 +33,14 @@ export class CoursesRepository {
         return row;
     }
 
+    async findByCode(code: string): Promise<Course> {
+        const [row] = await this.db.select().from(courses).where(eq(courses.code, code)).limit(1);
+
+        if (!row) throw CourseNotFound(code);
+
+        return row;
+    }
+
     async update(id: string, data: CourseUpdate): Promise<Course> {
         const [row] = await this.db
             .update(courses)
