@@ -1,0 +1,57 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.yarn/cache/
+
+# Build output and test coverage
+dist/
+build/
+coverage/
+apps/coverage/
+.turbo/
+*.tsbuildinfo
+
+# Framework and bundler caches
+.cache/
+.vite/
+.vite-temp/
+.nitro/
+.tanstack/
+.wrangler/
+.output/
+.vinxi/
+
+# Environment and local configuration
+.env
+.env.*
+!.env.example
+!.env.sample
+!.env.template
+*.local
+
+# Logs and runtime files
+*.log
+logs/
+*.pid
+*.pid.lock
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# Local infrastructure and generated credentials
+infra/hetzner-k3s/kubeconfig
+infra/.env
+**/kubeconfig
+*.pem
+*.key
+gitlab-pat.txt
+pat.txt
+
+# Generated frontend files
+todos.json
+__unconfig*
