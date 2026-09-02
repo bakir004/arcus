@@ -1,10 +1,10 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { and, asc, eq } from 'drizzle-orm';
 import type { Database } from '@/database/client';
 import { DATABASE } from '@/database/database.module';
 import { exams } from '@/database/schema';
+import { ExamCreationFailed, ExamNotFound } from '@/modules/exams/exams/exams.errors';
 import type { Exam, ExamCreate, ExamUpdate } from '@/modules/exams/exams/exams.entity';
-import { examSchema } from '@/modules/exams/exams/exams.entity';
 
 @Injectable()
 export class ExamsRepository {
@@ -16,7 +16,9 @@ export class ExamsRepository {
             .values({ ...data, courseId, createdById })
             .returning();
 
-        return examSchema.parse(row);
+        if (!row) throw ExamCreationFailed();
+
+        return row;
     }
 
     async findAll(courseId: string): Promise<Exam[]> {
@@ -26,7 +28,7 @@ export class ExamsRepository {
             .where(eq(exams.courseId, courseId))
             .orderBy(asc(exams.createdAt));
 
-        return rows.map((row) => examSchema.parse(row));
+        return rows;
     }
 
     async findById(courseId: string, id: string): Promise<Exam> {
@@ -36,9 +38,9 @@ export class ExamsRepository {
             .where(and(eq(exams.courseId, courseId), eq(exams.id, id)))
             .limit(1);
 
-        if (!row) throw new NotFoundException('exam not found');
+        if (!row) throw ExamNotFound(id);
 
-        return examSchema.parse(row);
+        return row;
     }
 
     async update(courseId: string, id: string, data: ExamUpdate): Promise<Exam> {
@@ -51,9 +53,9 @@ export class ExamsRepository {
             .where(and(eq(exams.courseId, courseId), eq(exams.id, id)))
             .returning();
 
-        if (!row) throw new NotFoundException('exam not found');
+        if (!row) throw ExamNotFound(id);
 
-        return examSchema.parse(row);
+        return row;
     }
 
     async delete(courseId: string, id: string): Promise<void> {
@@ -62,6 +64,6 @@ export class ExamsRepository {
             .where(and(eq(exams.courseId, courseId), eq(exams.id, id)))
             .returning({ id: exams.id });
 
-        if (rows.length === 0) throw new NotFoundException('exam not found');
+        if (rows.length === 0) throw ExamNotFound(id);
     }
 }

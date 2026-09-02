@@ -1,6 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+/** Standard error response returned by the API. */
 export class ErrorDto {
+    /** One or more human-readable error messages. */
     @ApiProperty({
         type: [String],
         example: [
@@ -11,9 +13,11 @@ export class ErrorDto {
     })
     message: string[];
 
+    /** Short description of the HTTP error. */
     @ApiProperty({ example: 'Bad Request' })
     error: string;
 
+    /** HTTP status code. */
     @ApiProperty({ example: 400 })
     statusCode: number;
 }
