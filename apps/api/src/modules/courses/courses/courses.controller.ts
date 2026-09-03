@@ -9,8 +9,10 @@ import {
     ParseUUIDPipe,
     Patch,
     Post,
+    Res,
     UseGuards,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { OptionalAuth, Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import {
     ApiBadRequestResponse,
@@ -77,15 +79,19 @@ export class CoursesController {
     async findMe(
         @Param('id', ParseUUIDPipe) id: string,
         @Session() session: UserSession<typeof auth> | null,
-    ): Promise<MeResponseDto | null> {
-        if (!session) return null;
+        @Res() response: Response,
+    ): Promise<void> {
+        if (!session) {
+            response.status(200).json(null);
+            return;
+        }
 
         // Check that the course exists so an invalid course id is not indistinguishable
         // from a valid course for which the user has no membership.
         await this.coursesService.findById(id);
         const context = await this.authzService.getCourseAuthzContext(session.user.id, id);
 
-        return {
+        response.status(200).json({
             user: {
                 id: session.user.id,
                 name: session.user.name,
@@ -95,7 +101,7 @@ export class CoursesController {
             session: session.session,
             roles: context.roles,
             permissions: context.permissions,
-        };
+        });
     }
 
     @ApiOperation({ summary: 'Get a course by code' })

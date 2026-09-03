@@ -1,15 +1,26 @@
 import * as React from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { HeadContent, Outlet, Scripts, createRootRoute, useRouterState } from '@tanstack/react-router';
+import { HeadContent, Outlet, Scripts, createRootRoute, redirect, useRouterState } from '@tanstack/react-router';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AppShell } from '@/components/app/app-shell';
 import { NotFound } from '@/components/app/not-found';
 import { queryClient } from '@/lib/query-client';
+import { getMeRequest } from '@/features/auth/api/get-me';
 import appCss from '../styles.css?url';
 
 const THEME_INIT_SCRIPT = `(function(){try{var stored=window.localStorage.getItem('theme');var mode=(stored==='light'||stored==='dark'||stored==='auto')?stored:'auto';var prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;var resolved=mode==='auto'?(prefersDark?'dark':'light'):mode;var root=document.documentElement;root.classList.remove('light','dark');root.classList.add(resolved);if(mode==='auto'){root.removeAttribute('data-theme')}else{root.setAttribute('data-theme',mode)}root.style.colorScheme=resolved;}catch(e){}})();`;
+const loginRoute = '/login'
 
 export const Route = createRootRoute({
+    beforeLoad: async ({ location }) => {
+        // Login is the only public application route.
+        if (location.pathname === loginRoute) return;
+
+        const me = await getMeRequest().catch(() => null);
+        if (!me?.user) {
+            throw redirect({ to: loginRoute });
+        }
+    },
     notFoundComponent: NotFound,
     head: () => ({
         meta: [

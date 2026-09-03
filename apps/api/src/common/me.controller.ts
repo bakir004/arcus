@@ -1,4 +1,5 @@
-import { Controller, Get, Logger } from '@nestjs/common';
+import { Controller, Get, Logger, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiOkResponse, ApiOperation, ApiProperty, ApiPropertyOptional, ApiTags } from '@nestjs/swagger';
 import { OptionalAuth, Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import type { auth } from '@/auth';
@@ -66,8 +67,14 @@ export class MeController {
     @Get()
     @ApiOperation({ summary: 'Get current authenticated user context' })
     @ApiOkResponse({ description: 'Current user context or null.', type: MeResponseDto })
-    async findMe(@Session() session: UserSession<typeof auth> | null): Promise<MeResponseDto | null> {
-        if (!session) return null;
+    async findMe(
+        @Session() session: UserSession<typeof auth> | null,
+        @Res() response: Response,
+    ): Promise<void> {
+        if (!session) {
+            response.status(200).json(null);
+            return;
+        }
 
         const context = await this.authzService.getUserAuthzContext(session.user.id).catch((error) => {
             this.logger.warn(
@@ -76,7 +83,7 @@ export class MeController {
             return { roles: [], permissions: [] };
         });
 
-        return {
+        response.status(200).json({
             user: {
                 id: session.user.id,
                 name: session.user.name,
@@ -86,6 +93,6 @@ export class MeController {
             session: session.session,
             roles: context.roles,
             permissions: context.permissions,
-        };
+        });
     }
 }

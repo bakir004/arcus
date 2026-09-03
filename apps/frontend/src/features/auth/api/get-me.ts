@@ -13,10 +13,10 @@ export interface GlobalMeResponse {
     permissions?: string[];
 }
 
-export const getMeRequest = () => apiClient<GlobalMeResponse>('/me', { method: 'GET' });
+export const getMeRequest = () => apiClient<GlobalMeResponse | null>('/me', { method: 'GET' });
 
 export const useGetMe = () =>
-    useQuery<GlobalMeResponse>({
+    useQuery<GlobalMeResponse | null>({
         queryKey: ['auth', 'me'],
         queryFn: () => getMeRequest(),
         staleTime: 5 * 60 * 1000,
