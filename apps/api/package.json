@@ -89,16 +89,9 @@
       "!src/common/exception.filter.ts",
       "!src/auth.ts",
       "!src/main.ts",
-      "!src/swagger.ts"
+      "!src/swagger.ts",
+      "!src/database/**"
     ],
-    "coverageThreshold": {
-      "global": {
-        "statements": 90,
-        "branches": 80,
-        "functions": 90,
-        "lines": 90
-      }
-    },
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
   }

@@ -8,6 +8,7 @@ dotenv.config({
         path.resolve(process.cwd(), 'apps/api/.env'),
         path.resolve(process.cwd(), '.env'),
     ],
+    quiet: process.env.NODE_ENV === 'test',
 });
 import { ConfigService } from '@nestjs/config';
 import postgres from 'postgres';

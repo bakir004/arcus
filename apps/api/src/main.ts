@@ -6,7 +6,10 @@ import path from 'node:path';
 import dotenv from 'dotenv';
 import type { Request, Response } from 'express';
 
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({
+    path: path.resolve(__dirname, '../.env'),
+    quiet: process.env.NODE_ENV === 'test',
+});
 import { AppModule } from '@/app.module';
 import { HttpExceptionFilter } from '@/common/exception.filter';
 import { setupSwagger } from '@/swagger';
