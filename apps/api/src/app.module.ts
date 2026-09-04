@@ -9,6 +9,7 @@ import { DatabaseModule } from '@/database/database.module';
 import { CoursesModule } from './modules/courses/courses/courses.module';
 import { ExamsModule } from './modules/exams/exams/exams.module';
 import { QuestionsModule } from './modules/exams/questions/questions.module';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
     controllers: [MeController],
@@ -26,6 +27,7 @@ import { QuestionsModule } from './modules/exams/questions/questions.module';
         CoursesModule,
         ExamsModule,
         QuestionsModule,
+        StorageModule,
     ],
 })
 export class AppModule {}
