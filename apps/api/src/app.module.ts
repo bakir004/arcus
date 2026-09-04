@@ -7,6 +7,7 @@ import { AuthzModule } from '@/authz/authz.module';
 import { MeController } from '@/common/me.controller';
 import { DatabaseModule } from '@/database/database.module';
 import { CoursesModule } from './modules/courses/courses/courses.module';
+import { MaterialsModule } from './modules/courses/materials/materials.module';
 import { ExamsModule } from './modules/exams/exams/exams.module';
 import { QuestionsModule } from './modules/exams/questions/questions.module';
 import { StorageModule } from './storage/storage.module';
@@ -25,6 +26,7 @@ import { StorageModule } from './storage/storage.module';
             disableGlobalAuthGuard: false,
         }),
         CoursesModule,
+        MaterialsModule,
         ExamsModule,
         QuestionsModule,
         StorageModule,

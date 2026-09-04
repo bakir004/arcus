@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+import { extname } from 'node:path';
 import {
     DeleteObjectCommand,
     GetObjectCommand,
@@ -39,6 +41,27 @@ export class StorageService {
             credentials,
             forcePathStyle: true,
         });
+    }
+
+    async upload(
+        file: Express.Multer.File,
+    ): Promise<{ key: string; fileName: string; mimeType: string; size: number }> {
+        const fileName = file.originalname || 'file';
+        const suffix = extname(fileName)
+            .toLowerCase()
+            .replace(/[^a-z0-9.]/g, '');
+        const key = `course-materials/${new Date().toISOString().slice(0, 10)}/${randomUUID()}${suffix}`;
+        await this.uploadObject(key, file.buffer, file.mimetype);
+        return { key, fileName, mimeType: file.mimetype, size: file.size };
+    }
+
+    async cleanup(key: string | null | undefined): Promise<void> {
+        if (!key) return;
+        try {
+            await this.deleteObject(key);
+        } catch {
+            // Cleanup must not hide the original operation failure.
+        }
     }
 
     async uploadObject(key: string, buffer: Buffer, mimeType: string): Promise<string> {
