@@ -16,3 +16,23 @@ export enum ExamType {
 
 export const examTypeEnum = pgEnum('exam_type', ExamType);
 export const EXAM_TYPES = [...examTypeEnum.enumValues];
+
+export enum QuestionType {
+    MultipleChoice = 'multiple_choice',
+    Essay = 'essay',
+    Coding = 'coding',
+}
+
+export const questionTypeEnum = pgEnum('question_type', QuestionType);
+export const QUESTION_TYPES = [...questionTypeEnum.enumValues];
+
+export enum CodingLanguage {
+    Cpp = 'cpp',
+    JavaScript = 'javascript',
+    Java = 'java',
+    Python = 'python',
+    Sql = 'sql',
+}
+
+export const codingLanguageEnum = pgEnum('coding_language', CodingLanguage);
+export const CODING_LANGUAGES = [...codingLanguageEnum.enumValues];
