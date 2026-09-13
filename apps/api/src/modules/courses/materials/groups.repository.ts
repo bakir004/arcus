@@ -1,8 +1,8 @@
 import { courseGroups, db, eq } from '@/database';
 import { DATABASE } from '@/database/database.module';
 import { Inject, Injectable } from '@nestjs/common';
-import type { CourseGroup, CreateCourseGroup, EditCourseGroup } from '../materials.entity';
-import { MaterialGroupCreationFailed, MaterialGroupNotFound } from '../materials.errors';
+import type { CourseGroup, CreateCourseGroup, EditCourseGroup } from './materials.entity';
+import { MaterialGroupCreationFailed, MaterialGroupNotFound } from './materials.errors';
 
 @Injectable()
 export class CourseGroupsRepository {
