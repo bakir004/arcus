@@ -37,6 +37,7 @@ import {
     EditMaterialDto,
     EditMaterialGroupDto,
     MaterialGroupResponseDto,
+    MoveMaterialDto,
     materialCreateApiSchema,
     materialResponseApiSchema,
     materialResponseFromEntity,
@@ -151,6 +152,31 @@ export class MaterialsController {
         const material = await this.service.create(courseId, session.user.id, dto, file, dto.groupId);
 
         return materialResponseFromEntity(material);
+    }
+
+    @Patch(':materialId/move')
+    @ApiOperation({ summary: 'Move a material to another group and position' })
+    async move(
+        @Param('courseId', ParseUUIDPipe) courseId: string,
+        @Param('materialId', ParseUUIDPipe) materialId: string,
+        @Body() dto: MoveMaterialDto,
+    ) {
+        return materialResponseFromEntity(await this.service.moveMaterial(courseId, materialId, dto));
+    }
+
+    @Get(':materialId/url')
+    @ApiOperation({ summary: 'Get a temporary file material URL' })
+    @ApiParam({ name: 'courseId', format: 'uuid' })
+    @ApiParam({ name: 'materialId', format: 'uuid' })
+    @ApiOkResponse({ schema: { type: 'object', properties: { url: { type: 'string', format: 'uri' } } } })
+    @ApiBadRequestResponse({ type: ErrorResponseDto })
+    @ApiNotFoundResponse({ type: ErrorResponseDto })
+    @ApiUnauthorizedResponse({ type: ErrorResponseDto })
+    async getFileUrl(
+        @Param('courseId', ParseUUIDPipe) courseId: string,
+        @Param('materialId', ParseUUIDPipe) materialId: string,
+    ) {
+        return { url: await this.service.getFileUrl(courseId, materialId) };
     }
 
     @Patch(':materialId')

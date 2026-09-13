@@ -23,6 +23,7 @@ import {
 import { examSeeds } from '@/database/seed/exams/exams';
 import { facultySeeds } from '@/database/seed/faculties/faculties';
 import { professorEmail, studentEmail, userSeeds } from '@/database/seed/users/users';
+import { seedAspMaterials } from '@/database/seed/courses/materials';
 
 async function seedUsers() {
     for (const seed of userSeeds) {
@@ -216,6 +217,7 @@ async function seedExams(createdById: string) {
 async function seed() {
     const { professor, users } = await seedUsers();
     await seedFacultyAndCourses(professor.id, users);
+    await seedAspMaterials(professor.id);
     await seedExams(professor.id);
 }
 

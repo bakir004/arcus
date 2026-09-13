@@ -9,11 +9,18 @@ function CoursePage() {
     return (
         <main>
             <p>Course</p>
-            <Button asChild>
-                <Link to="/courses/$code/admin" params={{ code }}>
-                    Course admin
-                </Link>
-            </Button>
+            <div className="mt-4 flex gap-2">
+                <Button asChild>
+                    <Link to="/courses/$code/materials" params={{ code }}>
+                        Course materials
+                    </Link>
+                </Button>
+                <Button asChild variant="outline">
+                    <Link to="/courses/$code/admin" params={{ code }}>
+                        Course admin
+                    </Link>
+                </Button>
+            </div>
         </main>
     );
 }

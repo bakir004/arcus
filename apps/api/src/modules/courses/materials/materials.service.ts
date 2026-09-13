@@ -1,6 +1,12 @@
 import { StorageService } from '@/storage/storage.service';
 import { BadRequestException, Injectable } from '@nestjs/common';
-import type { CreateMaterialDto, CreateMaterialGroupDto, EditMaterialDto, EditMaterialGroupDto } from './materials.dto';
+import type {
+    CreateMaterialDto,
+    CreateMaterialGroupDto,
+    EditMaterialDto,
+    EditMaterialGroupDto,
+    MoveMaterialDto,
+} from './materials.dto';
 import type { CourseContentElement, CourseGroup, EditMaterialContent, Material } from './materials.entity';
 import { CourseGroupsRepository } from './groups.repository';
 import { MaterialsRepository } from './materials.repository';
@@ -20,6 +26,12 @@ export class MaterialsService {
 
     findById(courseId: string, materialId: string): Promise<Material> {
         return this.materials.findById(courseId, materialId);
+    }
+
+    async getFileUrl(courseId: string, materialId: string): Promise<string> {
+        const material = await this.findById(courseId, materialId);
+        if (material.kind !== 'FILE') throw new BadRequestException('Only file materials have download URLs');
+        return this.storage.getPresignedUrl(material.fileKey);
     }
 
     async createGroup(courseId: string, dto: CreateMaterialGroupDto): Promise<CourseGroup> {
@@ -122,6 +134,27 @@ export class MaterialsService {
             }
             throw error;
         }
+    }
+
+    async moveMaterial(courseId: string, materialId: string, dto: MoveMaterialDto): Promise<Material> {
+        const material = await this.findById(courseId, materialId);
+        const sourceGroup = await this.groups.findById(courseId, material.courseGroupId);
+        let targetGroupId = dto.groupId;
+        if (!targetGroupId) {
+            const group = await this.groups.create({
+                courseId,
+                position: await this.groups.nextPosition(courseId),
+                name: null,
+                description: null,
+            });
+            targetGroupId = group.id;
+        } else {
+            await this.groups.findById(courseId, targetGroupId);
+        }
+        const moved = await this.materials.move(courseId, materialId, targetGroupId, dto.position);
+        if (sourceGroup.name === null && sourceGroup.id !== targetGroupId)
+            await this.groups.delete(courseId, sourceGroup.id);
+        return moved;
     }
 
     async delete(courseId: string, materialId: string): Promise<boolean> {

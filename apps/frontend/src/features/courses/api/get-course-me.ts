@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/api/api-client';
 
 export interface CourseMeResponse {
@@ -14,3 +15,10 @@ export interface CourseMeResponse {
 
 export const getCourseMeRequest = (courseId: string): Promise<CourseMeResponse | null> =>
     apiClient<CourseMeResponse | null>(`/courses/${courseId}/me`);
+
+export const useGetCourseMe = (courseId: string) =>
+    useQuery({
+        queryKey: ['courses', courseId, 'me'],
+        queryFn: () => getCourseMeRequest(courseId),
+        enabled: Boolean(courseId),
+    });

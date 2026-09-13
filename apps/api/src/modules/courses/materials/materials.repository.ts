@@ -1,4 +1,5 @@
 import { asc, courseMaterials, eq } from '@/database';
+import { sql } from 'drizzle-orm';
 import type { Database } from '@/database/client';
 import { DATABASE } from '@/database/database.module';
 import { Inject, Injectable } from '@nestjs/common';
@@ -79,6 +80,50 @@ export class MaterialsRepository {
             .returning();
         if (!material) throw MaterialNotFound(id);
         return this.toMaterial(material);
+    }
+
+    async move(courseId: string, id: string, targetGroupId: string, position: number): Promise<Material> {
+        const current = await this.findById(courseId, id);
+        const targetGroup = await this.database.query.courseGroups.findFirst({
+            where: (group) => eq(group.id, targetGroupId),
+        });
+        if (!targetGroup || targetGroup.courseId !== courseId) throw MaterialNotFound(id);
+        const sourceId = current.courseGroupId;
+        const source = await this.database.query.courseMaterials.findMany({
+            where: (material) => eq(material.courseGroupId, sourceId),
+            orderBy: (material) => asc(material.position),
+        });
+        const destination =
+            sourceId === targetGroupId
+                ? source
+                : await this.database.query.courseMaterials.findMany({
+                      where: (material) => eq(material.courseGroupId, targetGroupId),
+                      orderBy: (material) => asc(material.position),
+                  });
+        const without = source.filter((material) => material.id !== id);
+        const target = destination.filter((material) => material.id !== id);
+        const index = Math.max(0, Math.min(position, target.length));
+        const moving = source.find((material) => material.id === id);
+        if (!moving) throw MaterialNotFound(id);
+        const moved = [...target.slice(0, index), moving, ...target.slice(index)];
+        return this.database.transaction(async (tx) => {
+            await tx.execute(sql`SET CONSTRAINTS course_materials_group_position_key DEFERRED`);
+            for (const [nextPosition, material] of without.entries()) {
+                await tx
+                    .update(courseMaterials)
+                    .set({ position: nextPosition, updatedAt: new Date() })
+                    .where(eq(courseMaterials.id, material.id));
+            }
+            for (const [nextPosition, material] of moved.entries()) {
+                await tx
+                    .update(courseMaterials)
+                    .set({ courseGroupId: targetGroupId, position: nextPosition, updatedAt: new Date() })
+                    .where(eq(courseMaterials.id, material.id));
+            }
+            const updated = await tx.query.courseMaterials.findFirst({ where: (material) => eq(material.id, id) });
+            if (!updated) throw MaterialNotFound(id);
+            return this.toMaterial(updated);
+        });
     }
 
     async delete(courseId: string, id: string): Promise<boolean> {
