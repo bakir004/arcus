@@ -91,6 +91,9 @@ function slugify(value: string) {
 function groupAnchor(group: MaterialGroup, index: number) {
     return `group-${slugify(group.name)}-${index + 1}`;
 }
+function scrollToGroup(anchorId: string) {
+    document.getElementById(anchorId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 function extension(fileName: string | null) {
     return fileName?.split('.').pop()?.toLowerCase() ?? '';
 }
@@ -433,7 +436,12 @@ function GroupCard({
                 .catch(() => toast.error('Failed to save material order.'));
     };
     return (
-        <section id={anchorId} className="scroll-mt-24 overflow-hidden rounded-lg border border-border bg-card">
+        <section
+            id={anchorId}
+            data-group-id={group.id}
+            data-group-name={group.name}
+            className="scroll-mt-24 overflow-hidden rounded-lg border border-border bg-card"
+        >
             {!standalone && (
                 <Group
                     gap={4}
@@ -490,7 +498,13 @@ function GroupCard({
     );
 }
 
-function CreateCourseMaterialGroupDialog({ courseId }: { courseId: string }) {
+function CreateCourseMaterialGroupDialog({
+    courseId,
+    onCreated,
+}: {
+    courseId: string;
+    onCreated?: (key: string) => void;
+}) {
     const [open, setOpen] = useState(false);
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
@@ -501,6 +515,7 @@ function CreateCourseMaterialGroupDialog({ courseId }: { courseId: string }) {
         try {
             await createGroup.mutateAsync({ courseId, name, description });
             toast.success('Material group created.');
+            onCreated?.(name);
             setName('');
             setDescription('');
             setOpen(false);
@@ -559,7 +574,15 @@ function CreateCourseMaterialGroupDialog({ courseId }: { courseId: string }) {
     );
 }
 
-function CreateCourseMaterialDialog({ courseId, groups }: { courseId: string; groups: MaterialGroup[] }) {
+function CreateCourseMaterialDialog({
+    courseId,
+    groups,
+    onCreated,
+}: {
+    courseId: string;
+    groups: MaterialGroup[];
+    onCreated?: (key: string | null) => void;
+}) {
     const [open, setOpen] = useState(false);
     const [kind, setKind] = useState<'FILE' | 'LINK' | 'TEXT'>('FILE');
     const [groupId, setGroupId] = useState('');
@@ -598,6 +621,7 @@ function CreateCourseMaterialDialog({ courseId, groups }: { courseId: string; gr
         try {
             await createMaterial.mutateAsync({ courseId, groupId: groupId || null, input, file });
             toast.success('Course material created.');
+            onCreated?.(groupId || null);
             reset();
             setOpen(false);
         } catch {
@@ -730,6 +754,7 @@ export function CourseMaterialsPage() {
     const { data: content, isLoading, isError } = useGetCourseMaterials(course?.id ?? '');
     const { data: courseMe } = useGetCourseMe(course?.id ?? '');
     const [search, setSearch] = useState('');
+    const [scrollTarget, setScrollTarget] = useState<string | null | undefined>();
     const materialGroups = useMemo(
         () => (content ?? []).filter(isGroup).filter((group) => group.name !== null),
         [content],
@@ -767,6 +792,20 @@ export function CourseMaterialsPage() {
         if (solo?.materials.length) result.unshift({ group: solo, standalone: true });
         return result;
     }, [content, course?.id, search]);
+    useEffect(() => {
+        if (scrollTarget === undefined) return;
+        const timeout = window.setTimeout(() => {
+            const element = Array.from(document.querySelectorAll<HTMLElement>('[data-group-id]')).find((candidate) =>
+                scrollTarget
+                    ? candidate.dataset.groupId === scrollTarget || candidate.dataset.groupName === scrollTarget
+                    : candidate.dataset.groupName === 'None',
+            );
+            if (!element) return;
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            setScrollTarget(undefined);
+        }, 300);
+        return () => window.clearTimeout(timeout);
+    }, [content, groups, scrollTarget]);
     if (courseLoading)
         return (
             <Box as="main" className="p-8 text-muted-foreground">
@@ -784,8 +823,12 @@ export function CourseMaterialsPage() {
             <Box className="min-w-0 flex-1">
                 {canCreateMaterial && (
                     <div className="mb-4 flex flex-wrap justify-end gap-2">
-                        <CreateCourseMaterialGroupDialog courseId={course.id} />
-                        <CreateCourseMaterialDialog courseId={course.id} groups={materialGroups} />
+                        <CreateCourseMaterialGroupDialog courseId={course.id} onCreated={setScrollTarget} />
+                        <CreateCourseMaterialDialog
+                            courseId={course.id}
+                            groups={materialGroups}
+                            onCreated={setScrollTarget}
+                        />
                     </div>
                 )}
                 <div className="relative max-w-md">
@@ -839,6 +882,10 @@ export function CourseMaterialsPage() {
                             <a
                                 key={group.id}
                                 href={`#${groupAnchor(group, index)}`}
+                                onClick={(event) => {
+                                    event.preventDefault();
+                                    scrollToGroup(groupAnchor(group, index));
+                                }}
                                 className="block rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
                             >
                                 {group.name}
