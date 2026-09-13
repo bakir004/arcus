@@ -155,28 +155,24 @@ export function CourseMaterialsPage() {
                         Contents
                     </p>
                     <nav className="mt-1 space-y-1">
-                        <a
-                            href="#top"
-                            onClick={(event) => {
-                                event.preventDefault();
-                                document.getElementById('top')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            }}
-                            className="block rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                        <button
+                            type="button"
+                            onClick={() =>
+                                document.getElementById('top')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                            }
+                            className="block w-full rounded-md px-3 py-2 text-left text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
                         >
                             Top
-                        </a>
+                        </button>
                         {displayedGroups.map(({ group }, index) => (
-                            <a
+                            <button
+                                type="button"
                                 key={group.id}
-                                href={`#${groupAnchor(group, index)}`}
-                                onClick={(event) => {
-                                    event.preventDefault();
-                                    scrollToGroup(groupAnchor(group, index));
-                                }}
-                                className="block rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                                onClick={() => scrollToGroup(groupAnchor(group, index))}
+                                className="block w-full rounded-md px-3 py-2 text-left text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
                             >
                                 {group.name}
-                            </a>
+                            </button>
                         ))}
                     </nav>
                 </Box>
