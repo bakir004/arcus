@@ -2,8 +2,9 @@ import { StorageService } from '@/storage/storage.service';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import type { CreateMaterialDto, CreateMaterialGroupDto, EditMaterialDto, EditMaterialGroupDto } from './materials.dto';
 import type { CourseContentElement, CourseGroup, EditMaterialContent, Material } from './materials.entity';
-import { MaterialsRepository } from './materials.repository';
 import { CourseGroupsRepository } from './groups.repository';
+import { MaterialsRepository } from './materials.repository';
+import { getMaterialRepository, parseMaterialInput } from './materials.repository.registry';
 
 @Injectable()
 export class MaterialsService {
@@ -42,12 +43,14 @@ export class MaterialsService {
         await this.findPublicGroup(courseId, groupId);
         const content = await this.materials.findCourseContent(courseId);
         const group = content.find((element) => 'materials' in element && element.id === groupId);
-        const fileKeys =
+        const resourceKeys =
             group && 'materials' in group
-                ? group.materials.filter((material) => material.kind === 'FILE').map((material) => material.fileKey)
+                ? group.materials
+                      .map((material) => getMaterialRepository(material.kind).resourceKey(material))
+                      .filter((key): key is string => key !== undefined)
                 : [];
         const deleted = await this.groups.delete(courseId, groupId);
-        await Promise.all(fileKeys.map((key) => this.storage.cleanup(key)));
+        await Promise.all(resourceKeys.map((key) => this.storage.cleanup(key)));
         return deleted;
     }
 
@@ -76,10 +79,11 @@ export class MaterialsService {
             anonymousGroupId = group.id;
         }
 
-        let uploadedKey: string | undefined;
+        let content: EditMaterialContent | undefined;
         try {
-            const content = await this.contentForCreate(dto, file);
-            if (content.kind === 'FILE') uploadedKey = content.fileKey;
+            const input = parseMaterialInput(dto.input);
+            const handler = getMaterialRepository(input.kind);
+            content = await handler.prepareCreate(input, file, this.storage);
             return await this.materials.create({
                 ...content,
                 uploadedById,
@@ -87,7 +91,7 @@ export class MaterialsService {
                 position: groupId ? await this.materials.nextGroupPosition(destinationGroupId) : 0,
             });
         } catch (error) {
-            await this.storage.cleanup(uploadedKey);
+            if (content) await this.storage.cleanup(getMaterialRepository(content.kind).resourceKey(content));
             if (anonymousGroupId) await this.groups.delete(courseId, anonymousGroupId).catch(() => undefined);
             throw error;
         }
@@ -100,21 +104,22 @@ export class MaterialsService {
         file?: Express.Multer.File,
     ): Promise<Material> {
         const current = await this.materials.findById(courseId, materialId);
-        const kind = dto.kind ?? current.kind;
-        let replacementKey: string | undefined;
+        const input = dto.input === undefined ? undefined : parseMaterialInput(dto.input);
+        const handler = getMaterialRepository(input?.kind ?? current.kind);
+        const currentKey = getMaterialRepository(current.kind).resourceKey(current);
+        let content: EditMaterialContent | undefined;
 
         try {
-            const content = await this.contentForEdit(kind, dto, current, file);
-            if (content.kind === 'FILE' && (current.kind !== 'FILE' || content.fileKey !== current.fileKey))
-                replacementKey = content.fileKey;
-
+            content = await handler.prepareEdit(input, current, file, this.storage);
+            const replacementKey = handler.resourceKey(content);
             const updated = await this.materials.updateContent(courseId, materialId, content);
-            const resultingFileKey = content.kind === 'FILE' ? content.fileKey : undefined;
-            if (current.kind === 'FILE' && current.fileKey !== resultingFileKey)
-                await this.storage.cleanup(current.fileKey);
+            if (currentKey !== replacementKey) await this.storage.cleanup(currentKey);
             return updated;
         } catch (error) {
-            await this.storage.cleanup(replacementKey);
+            if (content) {
+                const replacementKey = handler.resourceKey(content);
+                if (replacementKey !== currentKey) await this.storage.cleanup(replacementKey);
+            }
             throw error;
         }
     }
@@ -122,7 +127,7 @@ export class MaterialsService {
     async delete(courseId: string, materialId: string): Promise<boolean> {
         const material = await this.materials.findById(courseId, materialId);
         const deleted = await this.materials.delete(courseId, materialId);
-        if (material.kind === 'FILE') await this.storage.cleanup(material.fileKey);
+        await this.storage.cleanup(getMaterialRepository(material.kind).resourceKey(material));
 
         const group = await this.groups.findById(courseId, material.courseGroupId);
         if (group.name === null) await this.groups.delete(courseId, group.id);
@@ -133,86 +138,5 @@ export class MaterialsService {
         const group = await this.groups.findById(courseId, groupId);
         if (group.name === null) throw new BadRequestException('Solo-material groups are internal');
         return group;
-    }
-
-    private async contentForCreate(dto: CreateMaterialDto, file?: Express.Multer.File): Promise<EditMaterialContent> {
-        switch (dto.kind) {
-            case 'TEXT':
-                if (!dto.textContent) throw new BadRequestException('Text content is required');
-                return { kind: 'TEXT', textContent: dto.textContent.trim() };
-            case 'LINK':
-                if (!dto.externalUrl) throw new BadRequestException('External URL is required');
-                if (!dto.title?.trim()) throw new BadRequestException('Title is required');
-                return {
-                    kind: 'LINK',
-                    title: dto.title.trim(),
-                    description: dto.description?.trim() || null,
-                    externalUrl: dto.externalUrl.trim(),
-                };
-            case 'FILE': {
-                if (!file) throw new BadRequestException('An uploaded file is required');
-                if (!dto.title?.trim()) throw new BadRequestException('Title is required');
-                const stored = await this.storage.upload(file);
-                return {
-                    kind: 'FILE',
-                    title: dto.title.trim(),
-                    description: dto.description?.trim() || null,
-                    fileKey: stored.key,
-                    fileName: stored.fileName,
-                    fileMimeType: stored.mimeType,
-                    fileSize: stored.size,
-                };
-            }
-        }
-    }
-
-    private async contentForEdit(
-        kind: Material['kind'],
-        dto: EditMaterialDto,
-        current: Material,
-        file?: Express.Multer.File,
-    ): Promise<EditMaterialContent> {
-        if (kind === 'TEXT') {
-            const textContent = dto.textContent ?? (current.kind === 'TEXT' ? current.textContent : undefined);
-            if (!textContent) throw new BadRequestException('Text content is required');
-            return { kind, textContent: textContent.trim() };
-        }
-
-        if (kind === 'LINK') {
-            const externalUrl = dto.externalUrl ?? (current.kind === 'LINK' ? current.externalUrl : undefined);
-            if (!externalUrl) throw new BadRequestException('External URL is required');
-            const title = dto.title?.trim() || (current.kind === 'LINK' ? current.title : '');
-            if (!title) throw new BadRequestException('Title is required');
-            return {
-                kind,
-                title,
-                description: dto.description?.trim() || (current.kind === 'LINK' ? current.description : null),
-                externalUrl: externalUrl.trim(),
-            };
-        }
-
-        if (file) {
-            if (!dto.title?.trim() && current.kind !== 'FILE') throw new BadRequestException('Title is required');
-            const stored = await this.storage.upload(file);
-            return {
-                kind,
-                title: dto.title?.trim() || (current.kind === 'FILE' ? current.title : ''),
-                description: dto.description?.trim() || (current.kind === 'FILE' ? current.description : null),
-                fileKey: stored.key,
-                fileName: stored.fileName,
-                fileMimeType: stored.mimeType,
-                fileSize: stored.size,
-            };
-        }
-        if (current.kind !== 'FILE') throw new BadRequestException('An uploaded file is required');
-        return {
-            kind,
-            title: current.title,
-            description: current.description,
-            fileKey: current.fileKey,
-            fileName: current.fileName,
-            fileMimeType: current.fileMimeType,
-            fileSize: current.fileSize,
-        };
     }
 }

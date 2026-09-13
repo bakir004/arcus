@@ -1,38 +1,87 @@
 import { courseMaterials, eq } from '@/database';
 import type { Database } from '@/database/client';
-import { Injectable } from '@nestjs/common';
-import type { CourseMaterial } from '../materials.entity';
-import type { LinkMaterial, CreateLinkMaterial, EditLinkMaterial } from './link-material.entity';
+import type { CourseMaterial, CreateMaterial, EditMaterialContent, Material, MaterialInput } from '../materials.entity';
 import { InvalidMaterialRecord, MaterialCreationFailed, MaterialNotFound } from '../materials.errors';
 import type { MaterialTypeRepository } from '../materials.repository.interface';
+import {
+    linkMaterialInputSchema,
+    type CreateLinkMaterial,
+    type EditLinkMaterial,
+    type LinkMaterial,
+} from './link-material.entity';
 
-@Injectable()
-export class LinkMaterialRepository
-    implements MaterialTypeRepository<CreateLinkMaterial, EditLinkMaterial, LinkMaterial>
-{
-    apiSchema: {
-        title: 'LinkMaterialRequest';
-        type: 'object';
-        required: ['kind', 'title', 'externalUrl'];
+export class LinkMaterialRepository implements MaterialTypeRepository {
+    readonly kind = 'LINK' as const;
+    readonly inputApiSchema = {
+        title: 'LinkMaterialInput',
+        type: 'object',
+        required: ['kind', 'title', 'externalUrl'],
         properties: {
-            kind: { const: 'LINK'; type: 'string' };
-            title: { type: 'string'; maxLength: 255 };
-            description: { type: 'string'; nullable: true; maxLength: 2000 };
-            externalUrl: { type: 'string'; format: 'uri'; maxLength: 2048 };
-        };
+            kind: { const: 'LINK', type: 'string' },
+            title: { type: 'string', minLength: 1, maxLength: 255 },
+            description: { type: 'string', nullable: true, maxLength: 2000 },
+            externalUrl: { type: 'string', format: 'uri', maxLength: 2048 },
+        },
     };
-    updateApiSchema: {
-        title: 'LinkMaterialUpdateRequest';
-        type: 'object';
+    readonly responseApiSchema = {
+        title: 'LinkMaterialResponse',
+        type: 'object',
+        required: [
+            'id',
+            'courseGroupId',
+            'uploadedById',
+            'position',
+            'kind',
+            'title',
+            'description',
+            'externalUrl',
+            'createdAt',
+            'updatedAt',
+        ],
         properties: {
-            kind: { const: 'LINK'; type: 'string' };
-            title: { type: 'string'; maxLength: 255 };
-            description: { type: 'string'; nullable: true; maxLength: 2000 };
-            externalUrl: { type: 'string'; format: 'uri'; maxLength: 2048 };
-        };
+            id: { type: 'string', format: 'uuid' },
+            courseGroupId: { type: 'string', format: 'uuid' },
+            uploadedById: { type: 'string' },
+            position: { type: 'integer', minimum: 0 },
+            kind: { const: 'LINK', type: 'string' },
+            title: { type: 'string' },
+            description: { type: 'string', nullable: true },
+            externalUrl: { type: 'string', format: 'uri' },
+            createdAt: { type: 'string', format: 'date-time' },
+            updatedAt: { type: 'string', format: 'date-time' },
+        },
     };
+
+    parseInput(input: unknown): MaterialInput {
+        return linkMaterialInputSchema.parse(input);
+    }
+
+    async prepareCreate(input: MaterialInput): Promise<EditMaterialContent> {
+        const parsed = linkMaterialInputSchema.parse(input);
+        return { ...parsed, description: parsed.description || null };
+    }
+
+    async prepareEdit(input: MaterialInput | undefined, current: Material): Promise<EditMaterialContent> {
+        if (input) return this.prepareCreate(input);
+        if (current.kind !== this.kind) throw new Error('Link material handler received a different material kind');
+        return {
+            kind: this.kind,
+            title: current.title,
+            description: current.description,
+            externalUrl: current.externalUrl,
+        };
+    }
+
+    resourceKey(): undefined {
+        return undefined;
+    }
+
+    toResponse(material: Material): Material {
+        return material;
+    }
+
     fromRecord(record: CourseMaterial): LinkMaterial {
-        if (record.kind !== 'LINK' || record.externalUrl === null || record.title === null)
+        if (record.kind !== this.kind || record.externalUrl === null || record.title === null)
             throw InvalidMaterialRecord(record.id);
         const {
             kind,
@@ -49,7 +98,8 @@ export class LinkMaterialRepository
         return { ...material, kind, title, description, externalUrl };
     }
 
-    async create(database: Database, data: CreateLinkMaterial): Promise<LinkMaterial> {
+    async create(database: Database, value: CreateMaterial): Promise<LinkMaterial> {
+        const data = value as CreateLinkMaterial;
         const [record] = await database
             .insert(courseMaterials)
             .values({
@@ -66,7 +116,8 @@ export class LinkMaterialRepository
         return this.fromRecord(record);
     }
 
-    async update(database: Database, id: string, data: EditLinkMaterial): Promise<LinkMaterial> {
+    async update(database: Database, id: string, value: EditMaterialContent): Promise<LinkMaterial> {
+        const data = value as EditLinkMaterial;
         const [record] = await database
             .update(courseMaterials)
             .set({

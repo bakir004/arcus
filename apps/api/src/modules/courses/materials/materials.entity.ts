@@ -1,7 +1,33 @@
+import { z } from 'zod';
 import { courseGroups, courseMaterials } from '@/database';
+import {
+    fileMaterialInputSchema,
+    type CreateFileMaterial,
+    type EditFileMaterial,
+    type FileMaterial,
+} from './file/file-material.entity';
+import {
+    linkMaterialInputSchema,
+    type CreateLinkMaterial,
+    type EditLinkMaterial,
+    type LinkMaterial,
+} from './link/link-material.entity';
+import {
+    textMaterialInputSchema,
+    type CreateTextMaterial,
+    type EditTextMaterial,
+    type TextMaterial,
+} from './text/text-material.entity';
 
-export const MATERIAL_KINDS = ['TEXT', 'FILE', 'LINK'] as const;
-export type MaterialKind = (typeof MATERIAL_KINDS)[number];
+export const materialInputSchema = z.discriminatedUnion('kind', [
+    textMaterialInputSchema,
+    fileMaterialInputSchema,
+    linkMaterialInputSchema,
+]);
+
+export type MaterialInput = z.infer<typeof materialInputSchema>;
+export const MATERIAL_KINDS = materialInputSchema.options.map((schema) => schema.shape.kind.value);
+export type MaterialKind = MaterialInput['kind'];
 
 export type CourseGroup = typeof courseGroups.$inferSelect;
 export type CreateCourseGroup = typeof courseGroups.$inferInsert;
@@ -23,61 +49,10 @@ export type MaterialBase = Omit<
     | 'fileSize'
 >;
 
-interface TextMaterialData {
-    textContent: string;
-}
-
-export interface TextMaterial extends MaterialBase, TextMaterialData {
-    kind: 'TEXT';
-}
-
-interface FileMaterialData {
-    title: string;
-    description: string | null;
-    fileKey: string;
-    fileName: string | null;
-    fileMimeType: string | null;
-    fileSize: number | null;
-}
-
-export interface FileMaterial extends MaterialBase, FileMaterialData {
-    kind: 'FILE';
-}
-
-interface LinkMaterialData {
-    title: string;
-    description: string | null;
-    externalUrl: string;
-}
-
-export interface LinkMaterial extends MaterialBase, LinkMaterialData {
-    kind: 'LINK';
-}
-
+export type { FileMaterial, LinkMaterial, TextMaterial };
 export type Material = TextMaterial | FileMaterial | LinkMaterial;
-
-interface CreateMaterialBase {
-    uploadedById: string;
-    courseGroupId: string;
-    position: number;
-}
-
-type TextMaterialInput = TextMaterialData;
-type FileMaterialInput = Omit<FileMaterialData, 'fileName' | 'fileMimeType' | 'fileSize'> &
-    Partial<Pick<FileMaterialData, 'fileName' | 'fileMimeType' | 'fileSize'>>;
-type LinkMaterialInput = LinkMaterialData;
-
-export type CreateMaterial = CreateMaterialBase &
-    (
-        | ({ kind: 'TEXT' } & TextMaterialInput)
-        | ({ kind: 'FILE' } & FileMaterialInput)
-        | ({ kind: 'LINK' } & LinkMaterialInput)
-    );
-
-export type EditMaterialContent =
-    | ({ kind: 'TEXT' } & TextMaterialInput)
-    | ({ kind: 'FILE' } & FileMaterialInput)
-    | ({ kind: 'LINK' } & LinkMaterialInput);
+export type CreateMaterial = CreateTextMaterial | CreateFileMaterial | CreateLinkMaterial;
+export type EditMaterialContent = EditTextMaterial | EditFileMaterial | EditLinkMaterial;
 
 export interface MaterialGroup extends CourseGroup {
     name: string;

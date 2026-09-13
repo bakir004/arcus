@@ -3,8 +3,8 @@ import {
     Controller,
     Delete,
     Get,
-    HttpCode,
-    HttpStatus,
+    // HttpCode,
+    // HttpStatus,
     Param,
     ParseUUIDPipe,
     Patch,
@@ -36,18 +36,16 @@ import {
     CreateMaterialGroupDto,
     EditMaterialDto,
     EditMaterialGroupDto,
-    FileMaterialResponseDto,
-    LinkMaterialResponseDto,
     MaterialGroupResponseDto,
-    TextMaterialResponseDto,
     materialCreateApiSchema,
+    materialResponseApiSchema,
     materialResponseFromEntity,
     materialUpdateApiSchema,
 } from './materials.dto';
 import { MaterialsService } from './materials.service';
 
 @ApiTags('Courses')
-@ApiExtraModels(MaterialGroupResponseDto, TextMaterialResponseDto, FileMaterialResponseDto, LinkMaterialResponseDto)
+@ApiExtraModels(MaterialGroupResponseDto)
 @Controller({ path: 'courses/:courseId/materials', version: '1' })
 export class MaterialsController {
     constructor(private readonly service: MaterialsService) {}
@@ -60,12 +58,7 @@ export class MaterialsController {
         schema: {
             type: 'array',
             items: {
-                oneOf: [
-                    { $ref: getSchemaPath(MaterialGroupResponseDto) },
-                    { $ref: getSchemaPath(TextMaterialResponseDto) },
-                    { $ref: getSchemaPath(FileMaterialResponseDto) },
-                    { $ref: getSchemaPath(LinkMaterialResponseDto) },
-                ],
+                oneOf: [{ $ref: getSchemaPath(MaterialGroupResponseDto) }, ...materialResponseApiSchema.oneOf],
             },
         },
     })
@@ -114,7 +107,7 @@ export class MaterialsController {
     }
 
     @Delete('groups/:groupId')
-    @HttpCode(HttpStatus.NO_CONTENT)
+    // @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'Delete a material group' })
     @ApiParam({ name: 'courseId', format: 'uuid' })
     @ApiParam({ name: 'groupId', format: 'uuid' })
@@ -134,18 +127,12 @@ export class MaterialsController {
     @ApiParam({ name: 'courseId', format: 'uuid' })
     @ApiConsumes('multipart/form-data')
     @ApiBody({
-        description: 'The kind property discriminates the required type-specific fields.',
+        description: 'The input object is a discriminated union; input.kind selects its type-specific shape.',
         schema: materialCreateApiSchema,
     })
     @ApiCreatedResponse({
         description: 'The created material.',
-        schema: {
-            oneOf: [
-                { $ref: getSchemaPath(TextMaterialResponseDto) },
-                { $ref: getSchemaPath(FileMaterialResponseDto) },
-                { $ref: getSchemaPath(LinkMaterialResponseDto) },
-            ],
-        },
+        schema: materialResponseApiSchema,
     })
     @ApiBadRequestResponse({ type: ErrorResponseDto })
     @ApiNotFoundResponse({ type: ErrorResponseDto })
@@ -173,18 +160,12 @@ export class MaterialsController {
     @ApiConsumes('multipart/form-data')
     @ApiBody({
         description:
-            'The kind property discriminates the type-specific fields. All fields are optional when retaining the current kind.',
+            'The optional input object is a discriminated union. When supplied, it completely replaces type-specific input.',
         schema: materialUpdateApiSchema,
     })
     @ApiOkResponse({
         description: 'The updated material.',
-        schema: {
-            oneOf: [
-                { $ref: getSchemaPath(TextMaterialResponseDto) },
-                { $ref: getSchemaPath(FileMaterialResponseDto) },
-                { $ref: getSchemaPath(LinkMaterialResponseDto) },
-            ],
-        },
+        schema: materialResponseApiSchema,
     })
     @ApiBadRequestResponse({ type: ErrorResponseDto })
     @ApiNotFoundResponse({ type: ErrorResponseDto })
@@ -206,7 +187,7 @@ export class MaterialsController {
     }
 
     @Delete(':materialId')
-    @HttpCode(HttpStatus.NO_CONTENT)
+    // @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'Delete a course material' })
     @ApiParam({ name: 'courseId', format: 'uuid' })
     @ApiParam({ name: 'materialId', format: 'uuid' })
