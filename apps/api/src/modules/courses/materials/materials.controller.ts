@@ -38,6 +38,7 @@ import {
     EditMaterialGroupDto,
     MaterialGroupResponseDto,
     MoveMaterialDto,
+    ReorderMaterialGroupDto,
     materialCreateApiSchema,
     materialResponseApiSchema,
     materialResponseFromEntity,
@@ -105,6 +106,16 @@ export class MaterialsController {
         @Body() dto: EditMaterialGroupDto,
     ) {
         return this.service.editGroup(courseId, groupId, dto);
+    }
+
+    @Patch('groups/:groupId/move')
+    @ApiOperation({ summary: 'Move a material group to another position' })
+    async moveGroup(
+        @Param('courseId', ParseUUIDPipe) courseId: string,
+        @Param('groupId', ParseUUIDPipe) groupId: string,
+        @Body() dto: ReorderMaterialGroupDto,
+    ) {
+        return this.service.moveGroup(courseId, groupId, dto.position);
     }
 
     @Delete('groups/:groupId')

@@ -10,7 +10,7 @@ import type {
     EditMaterialContent,
     Material,
 } from './materials.entity';
-import { InvalidMaterialRecord, MaterialNotFound } from './materials.errors';
+import { MaterialNotFound } from './materials.errors';
 import { getMaterialRepository } from './materials.repository.registry';
 
 @Injectable()
@@ -32,16 +32,10 @@ export class MaterialsRepository {
             },
         });
 
-        return groups.map((group) => {
-            const materials = group.materials.map((material) => this.toMaterial(material));
-            if (group.name !== null) return { ...group, name: group.name, materials };
-            if (materials.length !== 1) throw InvalidMaterialRecord(group.id);
-            return {
-                groupId: group.id,
-                position: group.position,
-                material: materials[0],
-            };
-        });
+        return groups.map((group) => ({
+            ...group,
+            materials: group.materials.map((material) => this.toMaterial(material)),
+        }));
     }
 
     async findById(courseId: string, id: string): Promise<Material> {

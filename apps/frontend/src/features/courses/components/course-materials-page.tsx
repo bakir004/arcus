@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import { type FormEvent, type HTMLAttributes, useEffect, useMemo, useState } from 'react';
 import Prism from 'prismjs';
 import 'prismjs/components/prism-c';
 import 'prismjs/components/prism-cpp';
@@ -14,6 +14,7 @@ import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type D
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useParams } from '@tanstack/react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Box, Group } from '@/components/common';
 import { Button } from '@/components/ui/button';
@@ -41,6 +42,7 @@ import { useGetCourseMe } from '@/features/courses/api/get-course-me';
 import { useCreateCourseMaterial } from '@/features/courses/api/create-course-material';
 import { useCreateCourseMaterialGroup } from '@/features/courses/api/create-course-material-group';
 import { useMoveCourseMaterial } from '@/features/courses/api/move-course-material';
+import { useMoveCourseMaterialGroup } from '@/features/courses/api/move-course-material-group';
 import {
     ChevronDown,
     ClipboardList,
@@ -89,7 +91,7 @@ function slugify(value: string) {
     );
 }
 function groupAnchor(group: MaterialGroup, index: number) {
-    return `group-${slugify(group.name)}-${index + 1}`;
+    return `group-${slugify(group.name ?? 'root')}-${index + 1}`;
 }
 function scrollToGroup(anchorId: string) {
     document.getElementById(anchorId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -408,16 +410,44 @@ function SortableMaterial({ courseId, material }: { courseId: string; material: 
     );
 }
 
+function SortableGroupCard({
+    courseId,
+    group,
+    anchorId,
+}: {
+    courseId: string;
+    group: MaterialGroup;
+    anchorId?: string;
+}) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: group.id });
+    return (
+        <div
+            ref={setNodeRef}
+            style={{ transform: CSS.Translate.toString(transform), transition: isDragging ? undefined : transition }}
+            className={isDragging ? 'opacity-70' : undefined}
+        >
+            <GroupCard
+                courseId={courseId}
+                group={group}
+                anchorId={anchorId}
+                groupDragHandleProps={{ ...attributes, ...listeners }}
+            />
+        </div>
+    );
+}
+
 function GroupCard({
     courseId,
     group,
     standalone = false,
     anchorId,
+    groupDragHandleProps,
 }: {
     courseId: string;
     group: MaterialGroup;
     standalone?: boolean;
     anchorId?: string;
+    groupDragHandleProps?: HTMLAttributes<HTMLButtonElement>;
 }) {
     const [materials, setMaterials] = useState(group.materials);
     const [collapsed, setCollapsed] = useState(false);
@@ -439,8 +469,8 @@ function GroupCard({
         <section
             id={anchorId}
             data-group-id={group.id}
-            data-group-name={group.name}
-            className="scroll-mt-24 overflow-hidden rounded-lg border border-border bg-card"
+            data-group-name={group.name ?? ''}
+            className={`scroll-mt-24 overflow-hidden rounded-lg border ${group.name === null ? 'border-red-500 bg-red-500/10' : 'border-border bg-card'}`}
         >
             {!standalone && (
                 <Group
@@ -450,7 +480,8 @@ function GroupCard({
                 >
                     <button
                         type="button"
-                        aria-label={`Drag ${group.name}`}
+                        {...groupDragHandleProps}
+                        aria-label={`Drag ${group.name ?? 'root materials'}`}
                         className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
                         onClick={(event) => event.stopPropagation()}
                     >
@@ -461,7 +492,7 @@ function GroupCard({
                     </Box>
                     <div className="min-w-0 flex-1">
                         <Group gap={2}>
-                            <h2 className="truncate font-semibold">{group.name}</h2>
+                            <h2 className="truncate font-semibold">{group.name ?? 'Root materials'}</h2>
                             <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
                                 {materials.length} {materials.length === 1 ? 'item' : 'items'}
                             </span>
@@ -760,52 +791,55 @@ export function CourseMaterialsPage() {
         [content],
     );
     const canCreateMaterial = courseMe?.permissions.includes('course:material:create') ?? false;
+    const moveGroup = useMoveCourseMaterialGroup();
+    const queryClient = useQueryClient();
+    const groupSensors = useSensors(useSensor(PointerSensor));
     const groups = useMemo(() => {
         const q = search.toLowerCase().trim();
-        const result: Array<{ group: MaterialGroup; standalone?: boolean }> = [];
-        let solo: MaterialGroup | null = null;
-        for (const item of content ?? []) {
-            if (isGroup(item)) {
-                const materials = item.materials.filter(
-                    (m) =>
-                        !q ||
-                        title(m).toLowerCase().includes(q) ||
-                        (m.kind !== 'TEXT' && (m.description ?? '').toLowerCase().includes(q)),
-                );
-                if (materials.length || (!q && item.materials.length === 0)) {
-                    result.push({ group: { ...item, materials } });
-                }
-            } else {
-                solo ??= {
-                    id: 'standalone',
-                    courseId: course?.id ?? '',
-                    position: 0,
-                    name: 'None',
-                    description: null,
-                    materials: [],
-                    createdAt: '',
-                    updatedAt: '',
-                };
-                if (!q || title(item).toLowerCase().includes(q)) solo.materials.push(item);
-            }
-        }
-        if (solo?.materials.length) result.unshift({ group: solo, standalone: true });
-        return result;
-    }, [content, course?.id, search]);
+        return (content ?? [])
+            .filter(isGroup)
+            .map((group) => ({
+                group: {
+                    ...group,
+                    materials: group.materials.filter(
+                        (material) =>
+                            !q ||
+                            title(material).toLowerCase().includes(q) ||
+                            (material.kind !== 'TEXT' && (material.description ?? '').toLowerCase().includes(q)),
+                    ),
+                },
+            }))
+            .filter(({ group }) => group.materials.length || (!q && group.materials.length === 0));
+    }, [content, search]);
+    const reorderGroups = ({ active, over }: DragEndEvent) => {
+        if (!over || active.id === over.id || search.trim()) return;
+        const oldIndex = groups.findIndex(({ group }) => group.id === String(active.id));
+        const newIndex = groups.findIndex(({ group }) => group.id === String(over.id));
+        if (oldIndex < 0 || newIndex < 0) return;
+        void moveGroup
+            .mutateAsync({ courseId: course?.id ?? '', groupId: String(active.id), position: newIndex })
+            .catch(() => {
+                void queryClient.refetchQueries({
+                    queryKey: ['courses', course?.id ?? '', 'materials'],
+                    type: 'active',
+                });
+                toast.error('Failed to save group order.');
+            });
+    };
     useEffect(() => {
         if (scrollTarget === undefined) return;
         const timeout = window.setTimeout(() => {
             const element = Array.from(document.querySelectorAll<HTMLElement>('[data-group-id]')).find((candidate) =>
                 scrollTarget
                     ? candidate.dataset.groupId === scrollTarget || candidate.dataset.groupName === scrollTarget
-                    : candidate.dataset.groupName === 'None',
+                    : candidate.dataset.groupName === '',
             );
             if (!element) return;
             element.scrollIntoView({ behavior: 'smooth', block: 'start' });
             setScrollTarget(undefined);
         }, 300);
         return () => window.clearTimeout(timeout);
-    }, [content, groups, scrollTarget]);
+    }, [scrollTarget]);
     if (courseLoading)
         return (
             <Box as="main" className="p-8 text-muted-foreground">
@@ -850,15 +884,21 @@ export function CourseMaterialsPage() {
                             Unable to load course materials.
                         </div>
                     ) : groups.length ? (
-                        groups.map(({ group, standalone }, index) => (
-                            <GroupCard
-                                key={group.id}
-                                courseId={course.id}
-                                group={group}
-                                standalone={standalone}
-                                anchorId={groupAnchor(group, index)}
-                            />
-                        ))
+                        <DndContext sensors={groupSensors} collisionDetection={closestCenter} onDragEnd={reorderGroups}>
+                            <SortableContext
+                                items={groups.map(({ group }) => group.id)}
+                                strategy={verticalListSortingStrategy}
+                            >
+                                {groups.map(({ group }, index) => (
+                                    <SortableGroupCard
+                                        key={group.id}
+                                        courseId={course.id}
+                                        group={group}
+                                        anchorId={groupAnchor(group, index)}
+                                    />
+                                ))}
+                            </SortableContext>
+                        </DndContext>
                     ) : (
                         <div className="rounded-lg border border-border bg-card p-8 text-center text-sm text-muted-foreground">
                             No course materials found.

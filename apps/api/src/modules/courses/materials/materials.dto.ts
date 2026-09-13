@@ -136,8 +136,8 @@ export class MaterialGroupResponseDto {
     courseId: string;
     @ApiProperty({ minimum: 0 })
     position: number;
-    @ApiProperty()
-    name: string;
+    @ApiProperty({ nullable: true })
+    name: string | null;
     @ApiPropertyOptional({ nullable: true })
     description: string | null;
     @ApiProperty({ type: 'array', items: materialResponseApiSchema })

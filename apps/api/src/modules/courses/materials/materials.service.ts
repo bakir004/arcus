@@ -43,6 +43,11 @@ export class MaterialsService {
         });
     }
 
+    async moveGroup(courseId: string, groupId: string, position: number): Promise<CourseGroup> {
+        await this.findPublicGroup(courseId, groupId);
+        return this.groups.move(courseId, groupId, position);
+    }
+
     async editGroup(courseId: string, groupId: string, dto: EditMaterialGroupDto): Promise<CourseGroup> {
         await this.findPublicGroup(courseId, groupId);
         return this.groups.update(courseId, groupId, {

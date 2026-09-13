@@ -37,7 +37,7 @@ export interface MaterialGroup {
     id: string;
     courseId: string;
     position: number;
-    name: string;
+    name: string | null;
     description: string | null;
     materials: CourseMaterial[];
     createdAt: string;

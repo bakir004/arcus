@@ -1,12 +1,14 @@
-import { courseGroups, db, eq } from '@/database';
+import { asc, courseGroups, eq } from '@/database';
+import { sql } from 'drizzle-orm';
 import { DATABASE } from '@/database/database.module';
 import { Inject, Injectable } from '@nestjs/common';
+import type { Database } from '@/database/client';
 import type { CourseGroup, CreateCourseGroup, EditCourseGroup } from './materials.entity';
 import { MaterialGroupCreationFailed, MaterialGroupNotFound } from './materials.errors';
 
 @Injectable()
 export class CourseGroupsRepository {
-    constructor(@Inject(DATABASE) private readonly database: typeof db) {}
+    constructor(@Inject(DATABASE) private readonly database: Database) {}
 
     async nextPosition(courseId: string): Promise<number> {
         const groups = await this.database.query.courseGroups.findMany({
@@ -31,6 +33,30 @@ export class CourseGroupsRepository {
             .returning();
         if (!group) throw MaterialGroupCreationFailed();
         return group;
+    }
+
+    async move(courseId: string, id: string, position: number): Promise<CourseGroup> {
+        const current = await this.findById(courseId, id);
+        const groups = await this.database.query.courseGroups.findMany({
+            where: (group) => eq(group.courseId, courseId),
+            orderBy: (group) => asc(group.position),
+        });
+        const without = groups.filter((group) => group.id !== id);
+        const index = Math.max(0, Math.min(position, without.length));
+        const ordered = [...without.slice(0, index), current, ...without.slice(index)];
+
+        return this.database.transaction(async (tx) => {
+            await tx.execute(sql`SET CONSTRAINTS course_groups_course_position_key DEFERRED`);
+            for (const [nextPosition, group] of ordered.entries()) {
+                await tx
+                    .update(courseGroups)
+                    .set({ position: nextPosition, updatedAt: new Date() })
+                    .where(eq(courseGroups.id, group.id));
+            }
+            const moved = await tx.query.courseGroups.findFirst({ where: (group) => eq(group.id, id) });
+            if (!moved) throw MaterialGroupNotFound(id);
+            return moved;
+        });
     }
 
     async update(courseId: string, id: string, data: EditCourseGroup): Promise<CourseGroup> {

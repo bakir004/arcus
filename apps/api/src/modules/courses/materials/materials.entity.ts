@@ -55,7 +55,7 @@ export type CreateMaterial = CreateTextMaterial | CreateFileMaterial | CreateLin
 export type EditMaterialContent = EditTextMaterial | EditFileMaterial | EditLinkMaterial;
 
 export interface MaterialGroup extends CourseGroup {
-    name: string;
+    name: string | null;
     materials: Material[];
 }
 
