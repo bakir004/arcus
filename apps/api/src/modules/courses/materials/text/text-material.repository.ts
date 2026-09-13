@@ -1,15 +1,32 @@
 import { courseMaterials, eq } from '@/database';
 import type { Database } from '@/database/client';
 import { Injectable } from '@nestjs/common';
-import type { CourseMaterial } from '../../materials.entity';
+import type { CourseMaterial } from '../materials.entity';
 import type { TextMaterial, CreateTextMaterial, EditTextMaterial } from './text-material.entity';
-import { InvalidMaterialRecord, MaterialCreationFailed, MaterialNotFound } from '../../materials.errors';
-import type { MaterialTypeRepository } from '../../materials.repository.interface';
+import { InvalidMaterialRecord, MaterialCreationFailed, MaterialNotFound } from '../materials.errors';
+import type { MaterialTypeRepository } from '../materials.repository.interface';
 
 @Injectable()
 export class TextMaterialRepository
     implements MaterialTypeRepository<CreateTextMaterial, EditTextMaterial, TextMaterial>
 {
+    apiSchema: {
+        title: 'TextMaterialRequest';
+        type: 'object';
+        required: ['kind', 'textContent'];
+        properties: {
+            kind: { const: 'TEXT'; type: 'string' };
+            textContent: { type: 'string'; maxLength: 100000 };
+        };
+    };
+    updateApiSchema: {
+        title: 'TextMaterialUpdateRequest';
+        type: 'object';
+        properties: {
+            kind: { const: 'TEXT'; type: 'string' };
+            textContent: { type: 'string'; maxLength: 100000 };
+        };
+    };
     fromRecord(record: CourseMaterial): TextMaterial {
         if (record.kind !== 'TEXT' || record.textContent === null) throw InvalidMaterialRecord(record.id);
         const {

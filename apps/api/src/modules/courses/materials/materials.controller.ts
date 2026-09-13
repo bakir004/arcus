@@ -17,32 +17,61 @@ import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import type { auth } from '@/auth';
 import {
     ApiBadRequestResponse,
+    ApiBody,
     ApiConsumes,
     ApiCreatedResponse,
+    ApiExtraModels,
     ApiNoContentResponse,
+    ApiNotFoundResponse,
     ApiOkResponse,
     ApiOperation,
     ApiParam,
     ApiTags,
+    ApiUnauthorizedResponse,
+    getSchemaPath,
 } from '@nestjs/swagger';
 import { ErrorResponseDto } from '@/common/error.dto';
+import {
+    CreateMaterialDto,
+    CreateMaterialGroupDto,
+    EditMaterialDto,
+    EditMaterialGroupDto,
+    FileMaterialResponseDto,
+    LinkMaterialResponseDto,
+    MaterialGroupResponseDto,
+    TextMaterialResponseDto,
+    materialCreateApiSchema,
+    materialResponseFromEntity,
+    materialUpdateApiSchema,
+} from './materials.dto';
 import { MaterialsService } from './materials.service';
-import { CreateMaterialGroupDto } from './dto/create-group.dto';
-import { CreateMaterialDto } from './dto/create-material.dto';
-import { EditMaterialGroupDto } from './dto/edit-group.dto';
-import { EditMaterialDto } from './dto/edit-material.dto';
-import { MaterialGroupResponseDto } from './dto/group-response.dto';
-import { materialResponseFromEntity } from './dto/material-response.dto';
 
 @ApiTags('Courses')
-@Controller('courses/:courseId/materials')
+@ApiExtraModels(MaterialGroupResponseDto, TextMaterialResponseDto, FileMaterialResponseDto, LinkMaterialResponseDto)
+@Controller({ path: 'courses/:courseId/materials', version: '1' })
 export class MaterialsController {
     constructor(private readonly service: MaterialsService) {}
 
     @Get()
-    @ApiOperation({ summary: 'List course materials' })
+    @ApiOperation({ summary: 'List course materials and material groups' })
     @ApiParam({ name: 'courseId', format: 'uuid' })
-    @ApiOkResponse({ type: Object, isArray: true })
+    @ApiOkResponse({
+        description: 'Course content ordered by group and material position.',
+        schema: {
+            type: 'array',
+            items: {
+                oneOf: [
+                    { $ref: getSchemaPath(MaterialGroupResponseDto) },
+                    { $ref: getSchemaPath(TextMaterialResponseDto) },
+                    { $ref: getSchemaPath(FileMaterialResponseDto) },
+                    { $ref: getSchemaPath(LinkMaterialResponseDto) },
+                ],
+            },
+        },
+    })
+    @ApiBadRequestResponse({ type: ErrorResponseDto })
+    @ApiNotFoundResponse({ type: ErrorResponseDto })
+    @ApiUnauthorizedResponse({ type: ErrorResponseDto })
     async findAll(@Param('courseId', ParseUUIDPipe) courseId: string) {
         const content = await this.service.findCourseContent(courseId);
 
@@ -57,13 +86,25 @@ export class MaterialsController {
 
     @Post('groups')
     @ApiOperation({ summary: 'Create a material group' })
+    @ApiParam({ name: 'courseId', format: 'uuid' })
+    @ApiBody({ type: CreateMaterialGroupDto })
     @ApiCreatedResponse({ type: MaterialGroupResponseDto })
     @ApiBadRequestResponse({ type: ErrorResponseDto })
+    @ApiNotFoundResponse({ type: ErrorResponseDto })
+    @ApiUnauthorizedResponse({ type: ErrorResponseDto })
     async createGroup(@Param('courseId', ParseUUIDPipe) courseId: string, @Body() dto: CreateMaterialGroupDto) {
         return this.service.createGroup(courseId, dto);
     }
 
     @Patch('groups/:groupId')
+    @ApiOperation({ summary: 'Update a material group' })
+    @ApiParam({ name: 'courseId', format: 'uuid' })
+    @ApiParam({ name: 'groupId', format: 'uuid' })
+    @ApiBody({ type: EditMaterialGroupDto })
+    @ApiOkResponse({ type: MaterialGroupResponseDto })
+    @ApiBadRequestResponse({ type: ErrorResponseDto })
+    @ApiNotFoundResponse({ type: ErrorResponseDto })
+    @ApiUnauthorizedResponse({ type: ErrorResponseDto })
     async updateGroup(
         @Param('courseId', ParseUUIDPipe) courseId: string,
         @Param('groupId', ParseUUIDPipe) groupId: string,
@@ -74,7 +115,13 @@ export class MaterialsController {
 
     @Delete('groups/:groupId')
     @HttpCode(HttpStatus.NO_CONTENT)
+    @ApiOperation({ summary: 'Delete a material group' })
+    @ApiParam({ name: 'courseId', format: 'uuid' })
+    @ApiParam({ name: 'groupId', format: 'uuid' })
     @ApiNoContentResponse()
+    @ApiBadRequestResponse({ type: ErrorResponseDto })
+    @ApiNotFoundResponse({ type: ErrorResponseDto })
+    @ApiUnauthorizedResponse({ type: ErrorResponseDto })
     async deleteGroup(
         @Param('courseId', ParseUUIDPipe) courseId: string,
         @Param('groupId', ParseUUIDPipe) groupId: string,
@@ -83,13 +130,31 @@ export class MaterialsController {
     }
 
     @Post()
+    @ApiOperation({ summary: 'Create a course material' })
+    @ApiParam({ name: 'courseId', format: 'uuid' })
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        description: 'The kind property discriminates the required type-specific fields.',
+        schema: materialCreateApiSchema,
+    })
+    @ApiCreatedResponse({
+        description: 'The created material.',
+        schema: {
+            oneOf: [
+                { $ref: getSchemaPath(TextMaterialResponseDto) },
+                { $ref: getSchemaPath(FileMaterialResponseDto) },
+                { $ref: getSchemaPath(LinkMaterialResponseDto) },
+            ],
+        },
+    })
+    @ApiBadRequestResponse({ type: ErrorResponseDto })
+    @ApiNotFoundResponse({ type: ErrorResponseDto })
+    @ApiUnauthorizedResponse({ type: ErrorResponseDto })
     @UseInterceptors(
         FileInterceptor('file', {
             limits: { fileSize: 25 * 1024 * 1024 },
         }),
     )
-    @ApiConsumes('multipart/form-data')
-    @ApiCreatedResponse({ type: Object })
     async create(
         @Param('courseId', ParseUUIDPipe) courseId: string,
         @Session() session: UserSession<typeof auth>,
@@ -102,12 +167,33 @@ export class MaterialsController {
     }
 
     @Patch(':materialId')
+    @ApiOperation({ summary: 'Update a course material' })
+    @ApiParam({ name: 'courseId', format: 'uuid' })
+    @ApiParam({ name: 'materialId', format: 'uuid' })
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        description:
+            'The kind property discriminates the type-specific fields. All fields are optional when retaining the current kind.',
+        schema: materialUpdateApiSchema,
+    })
+    @ApiOkResponse({
+        description: 'The updated material.',
+        schema: {
+            oneOf: [
+                { $ref: getSchemaPath(TextMaterialResponseDto) },
+                { $ref: getSchemaPath(FileMaterialResponseDto) },
+                { $ref: getSchemaPath(LinkMaterialResponseDto) },
+            ],
+        },
+    })
+    @ApiBadRequestResponse({ type: ErrorResponseDto })
+    @ApiNotFoundResponse({ type: ErrorResponseDto })
+    @ApiUnauthorizedResponse({ type: ErrorResponseDto })
     @UseInterceptors(
         FileInterceptor('file', {
             limits: { fileSize: 25 * 1024 * 1024 },
         }),
     )
-    @ApiConsumes('multipart/form-data')
     async update(
         @Param('courseId', ParseUUIDPipe) courseId: string,
         @Param('materialId', ParseUUIDPipe) id: string,
@@ -121,6 +207,12 @@ export class MaterialsController {
 
     @Delete(':materialId')
     @HttpCode(HttpStatus.NO_CONTENT)
+    @ApiOperation({ summary: 'Delete a course material' })
+    @ApiParam({ name: 'courseId', format: 'uuid' })
+    @ApiParam({ name: 'materialId', format: 'uuid' })
+    @ApiNoContentResponse()
+    @ApiNotFoundResponse({ type: ErrorResponseDto })
+    @ApiUnauthorizedResponse({ type: ErrorResponseDto })
     async remove(@Param('courseId', ParseUUIDPipe) courseId: string, @Param('materialId', ParseUUIDPipe) id: string) {
         await this.service.delete(courseId, id);
     }

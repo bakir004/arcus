@@ -16,6 +16,14 @@ export class HttpExceptionFilter implements ExceptionFilter {
     private readonly logger = new Logger(HttpExceptionFilter.name);
 
     catch(exception: unknown, host: ArgumentsHost): void {
+        if (!(exception instanceof HttpException) && !(exception instanceof ZodError)) {
+            if (exception instanceof Error) {
+                this.logger.error('Unhandled exception', exception.stack);
+            } else {
+                this.logger.error(`Unhandled exception: ${String(exception)}`);
+            }
+        }
+
         const httpException =
             exception instanceof ZodError
                 ? new BadRequestException(this.formatZodIssues(exception))

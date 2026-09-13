@@ -1,9 +1,6 @@
 import { StorageService } from '@/storage/storage.service';
 import { BadRequestException, Injectable } from '@nestjs/common';
-import type { CreateMaterialGroupDto } from './dto/create-group.dto';
-import type { CreateMaterialDto } from './dto/create-material.dto';
-import type { EditMaterialGroupDto } from './dto/edit-group.dto';
-import type { EditMaterialDto } from './dto/edit-material.dto';
+import type { CreateMaterialDto, CreateMaterialGroupDto, EditMaterialDto, EditMaterialGroupDto } from './materials.dto';
 import type { CourseContentElement, CourseGroup, EditMaterialContent, Material } from './materials.entity';
 import { MaterialsRepository } from './materials.repository';
 import { CourseGroupsRepository } from './repositories/course-groups.repository';

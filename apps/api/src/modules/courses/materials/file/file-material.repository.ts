@@ -1,15 +1,36 @@
 import { courseMaterials, eq } from '@/database';
 import type { Database } from '@/database/client';
 import { Injectable } from '@nestjs/common';
-import type { CourseMaterial } from '../../materials.entity';
+import type { CourseMaterial } from '../materials.entity';
 import type { FileMaterial, CreateFileMaterial, EditFileMaterial } from './file-material.entity';
-import { InvalidMaterialRecord, MaterialCreationFailed, MaterialNotFound } from '../../materials.errors';
-import type { MaterialTypeRepository } from '../../materials.repository.interface';
+import { InvalidMaterialRecord, MaterialCreationFailed, MaterialNotFound } from '../materials.errors';
+import type { MaterialTypeRepository } from '../materials.repository.interface';
 
 @Injectable()
 export class FileMaterialRepository
     implements MaterialTypeRepository<CreateFileMaterial, EditFileMaterial, FileMaterial>
 {
+    apiSchema: {
+        title: 'FileMaterialRequest';
+        type: 'object';
+        required: ['kind', 'title', 'file'];
+        properties: {
+            kind: { const: 'FILE'; type: 'string' };
+            title: { type: 'string'; maxLength: 255 };
+            description: { type: 'string'; nullable: true; maxLength: 2000 };
+            file: { type: 'string'; format: 'binary' };
+        };
+    };
+    updateApiSchema: {
+        title: 'FileMaterialUpdateRequest';
+        type: 'object';
+        properties: {
+            kind: { const: 'FILE'; type: 'string' };
+            title: { type: 'string'; maxLength: 255 };
+            description: { type: 'string'; nullable: true; maxLength: 2000 };
+            file: { type: 'string'; format: 'binary' };
+        };
+    };
     fromRecord(record: CourseMaterial): FileMaterial {
         if (record.kind !== 'FILE' || record.fileKey === null || record.title === null)
             throw InvalidMaterialRecord(record.id);

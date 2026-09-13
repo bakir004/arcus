@@ -1,15 +1,36 @@
 import { courseMaterials, eq } from '@/database';
 import type { Database } from '@/database/client';
 import { Injectable } from '@nestjs/common';
-import type { CourseMaterial } from '../../materials.entity';
+import type { CourseMaterial } from '../materials.entity';
 import type { LinkMaterial, CreateLinkMaterial, EditLinkMaterial } from './link-material.entity';
-import { InvalidMaterialRecord, MaterialCreationFailed, MaterialNotFound } from '../../materials.errors';
-import type { MaterialTypeRepository } from '../../materials.repository.interface';
+import { InvalidMaterialRecord, MaterialCreationFailed, MaterialNotFound } from '../materials.errors';
+import type { MaterialTypeRepository } from '../materials.repository.interface';
 
 @Injectable()
 export class LinkMaterialRepository
     implements MaterialTypeRepository<CreateLinkMaterial, EditLinkMaterial, LinkMaterial>
 {
+    apiSchema: {
+        title: 'LinkMaterialRequest';
+        type: 'object';
+        required: ['kind', 'title', 'externalUrl'];
+        properties: {
+            kind: { const: 'LINK'; type: 'string' };
+            title: { type: 'string'; maxLength: 255 };
+            description: { type: 'string'; nullable: true; maxLength: 2000 };
+            externalUrl: { type: 'string'; format: 'uri'; maxLength: 2048 };
+        };
+    };
+    updateApiSchema: {
+        title: 'LinkMaterialUpdateRequest';
+        type: 'object';
+        properties: {
+            kind: { const: 'LINK'; type: 'string' };
+            title: { type: 'string'; maxLength: 255 };
+            description: { type: 'string'; nullable: true; maxLength: 2000 };
+            externalUrl: { type: 'string'; format: 'uri'; maxLength: 2048 };
+        };
+    };
     fromRecord(record: CourseMaterial): LinkMaterial {
         if (record.kind !== 'LINK' || record.externalUrl === null || record.title === null)
             throw InvalidMaterialRecord(record.id);
