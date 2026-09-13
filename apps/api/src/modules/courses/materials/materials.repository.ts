@@ -4,8 +4,8 @@ import type { Database } from '@/database/client';
 import { DATABASE } from '@/database/database.module';
 import { Inject, Injectable } from '@nestjs/common';
 import type {
-    CourseContentElement,
     CourseMaterial,
+    MaterialGroup,
     CreateMaterial,
     EditMaterialContent,
     Material,
@@ -21,7 +21,7 @@ export class MaterialsRepository {
         return getMaterialRepository(record.kind).fromRecord(record);
     }
 
-    async findCourseContent(courseId: string): Promise<CourseContentElement[]> {
+    async findCourseContent(courseId: string): Promise<MaterialGroup[]> {
         const groups = await this.database.query.courseGroups.findMany({
             where: (group) => eq(group.courseId, courseId),
             orderBy: (group) => asc(group.position),

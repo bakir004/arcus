@@ -13,7 +13,7 @@ export const courseGroups = pgTable(
             .notNull()
             .references(() => courses.id, { onDelete: 'cascade' }),
         position: integer('position').notNull(),
-        name: text('name'),
+        name: text('name').notNull(),
         description: text('description'),
         createdAt: timestamp('created_at').defaultNow().notNull(),
         updatedAt: timestamp('updated_at').defaultNow().notNull(),

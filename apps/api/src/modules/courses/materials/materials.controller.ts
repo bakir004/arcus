@@ -53,15 +53,13 @@ export class MaterialsController {
     constructor(private readonly service: MaterialsService) {}
 
     @Get()
-    @ApiOperation({ summary: 'List course materials and material groups' })
+    @ApiOperation({ summary: 'List course material groups' })
     @ApiParam({ name: 'courseId', format: 'uuid' })
     @ApiOkResponse({
         description: 'Course content ordered by group and material position.',
         schema: {
             type: 'array',
-            items: {
-                oneOf: [{ $ref: getSchemaPath(MaterialGroupResponseDto) }, ...materialResponseApiSchema.oneOf],
-            },
+            items: { $ref: getSchemaPath(MaterialGroupResponseDto) },
         },
     })
     @ApiBadRequestResponse({ type: ErrorResponseDto })
@@ -70,13 +68,7 @@ export class MaterialsController {
     async findAll(@Param('courseId', ParseUUIDPipe) courseId: string) {
         const content = await this.service.findCourseContent(courseId);
 
-        return content.map((item) => {
-            if ('materials' in item) {
-                return MaterialGroupResponseDto.fromEntity(item);
-            }
-
-            return materialResponseFromEntity(item.material);
-        });
+        return content.map((group) => MaterialGroupResponseDto.fromEntity(group));
     }
 
     @Post('groups')
@@ -160,7 +152,7 @@ export class MaterialsController {
         @Body() dto: CreateMaterialDto,
         @UploadedFile() file?: Express.Multer.File,
     ) {
-        const material = await this.service.create(courseId, session.user.id, dto, file, dto.groupId);
+        const material = await this.service.create(courseId, session.user.id, dto, file);
 
         return materialResponseFromEntity(material);
     }

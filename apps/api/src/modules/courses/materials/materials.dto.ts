@@ -1,6 +1,6 @@
 import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty, IsObject, IsOptional, IsString, IsUUID, MaxLength, Min, ValidateIf } from 'class-validator';
+import { IsInt, IsNotEmpty, IsObject, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
 import type { Material, MaterialGroup } from './materials.entity';
 import { getAllMaterialRepositories, getMaterialRepository } from './materials.repository.registry';
 
@@ -25,9 +25,9 @@ const parseMultipartObject = ({ value }: { value: unknown }): unknown => {
 
 export const materialCreateApiSchema = {
     type: 'object',
-    required: ['input'],
+    required: ['groupId', 'input'],
     properties: {
-        groupId: { type: 'string', format: 'uuid', description: 'Optional destination group.' },
+        groupId: { type: 'string', format: 'uuid', description: 'Destination group.' },
         input: {
             ...materialInputApiProperty,
             description: 'Type-specific material input. The kind property is the discriminator.',
@@ -81,10 +81,9 @@ export class CreateMaterialDto {
     @IsObject()
     input: object;
 
-    @ApiPropertyOptional({ format: 'uuid' })
-    @IsOptional()
+    @ApiProperty({ format: 'uuid' })
     @IsUUID()
-    groupId?: string;
+    groupId: string;
 }
 
 export class EditMaterialDto {
@@ -100,15 +99,9 @@ export class EditMaterialDto {
 }
 
 export class MoveMaterialDto {
-    @ApiPropertyOptional({
-        format: 'uuid',
-        nullable: true,
-        description: 'Destination group. Null moves the material to the root.',
-    })
-    @IsOptional()
-    @ValidateIf((dto: MoveMaterialDto) => dto.groupId !== null)
+    @ApiProperty({ format: 'uuid', description: 'Destination group.' })
     @IsUUID()
-    groupId?: string | null;
+    groupId: string;
 
     @ApiProperty({ minimum: 0 })
     @IsInt()
@@ -136,8 +129,8 @@ export class MaterialGroupResponseDto {
     courseId: string;
     @ApiProperty({ minimum: 0 })
     position: number;
-    @ApiProperty({ nullable: true })
-    name: string | null;
+    @ApiProperty()
+    name: string;
     @ApiPropertyOptional({ nullable: true })
     description: string | null;
     @ApiProperty({ type: 'array', items: materialResponseApiSchema })

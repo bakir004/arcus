@@ -8,7 +8,7 @@ export type CreateMaterialInput =
 
 export interface CreateCourseMaterialRequest {
     courseId: string;
-    groupId?: string | null;
+    groupId: string;
     input: CreateMaterialInput;
     file?: File;
 }
@@ -16,7 +16,7 @@ export interface CreateCourseMaterialRequest {
 export const createCourseMaterialRequest = ({ courseId, groupId, input, file }: CreateCourseMaterialRequest) => {
     const body = new FormData();
     body.append('input', JSON.stringify(input));
-    if (groupId) body.append('groupId', groupId);
+    body.append('groupId', groupId);
     if (file) body.append('file', file);
     return apiClient(`/courses/${courseId}/materials`, { method: 'POST', body });
 };

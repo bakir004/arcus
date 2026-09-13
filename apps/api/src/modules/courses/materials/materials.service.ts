@@ -7,7 +7,7 @@ import type {
     EditMaterialGroupDto,
     MoveMaterialDto,
 } from './materials.dto';
-import type { CourseContentElement, CourseGroup, EditMaterialContent, Material } from './materials.entity';
+import type { CourseGroup, EditMaterialContent, Material, MaterialGroup } from './materials.entity';
 import { CourseGroupsRepository } from './groups.repository';
 import { MaterialsRepository } from './materials.repository';
 import { getMaterialRepository, parseMaterialInput } from './materials.repository.registry';
@@ -20,7 +20,7 @@ export class MaterialsService {
         private readonly storage: StorageService,
     ) {}
 
-    findCourseContent(courseId: string): Promise<CourseContentElement[]> {
+    findCourseContent(courseId: string): Promise<MaterialGroup[]> {
         return this.materials.findCourseContent(courseId);
     }
 
@@ -44,12 +44,12 @@ export class MaterialsService {
     }
 
     async moveGroup(courseId: string, groupId: string, position: number): Promise<CourseGroup> {
-        await this.findPublicGroup(courseId, groupId);
+        await this.groups.findById(courseId, groupId);
         return this.groups.move(courseId, groupId, position);
     }
 
     async editGroup(courseId: string, groupId: string, dto: EditMaterialGroupDto): Promise<CourseGroup> {
-        await this.findPublicGroup(courseId, groupId);
+        await this.groups.findById(courseId, groupId);
         return this.groups.update(courseId, groupId, {
             ...(dto.name === undefined ? {} : { name: dto.name.trim() }),
             ...(dto.description === undefined ? {} : { description: dto.description?.trim() || null }),
@@ -57,15 +57,13 @@ export class MaterialsService {
     }
 
     async deleteGroup(courseId: string, groupId: string): Promise<boolean> {
-        await this.findPublicGroup(courseId, groupId);
+        await this.groups.findById(courseId, groupId);
         const content = await this.materials.findCourseContent(courseId);
-        const group = content.find((element) => 'materials' in element && element.id === groupId);
+        const group = content.find((candidate) => candidate.id === groupId);
         const resourceKeys =
-            group && 'materials' in group
-                ? group.materials
-                      .map((material) => getMaterialRepository(material.kind).resourceKey(material))
-                      .filter((key): key is string => key !== undefined)
-                : [];
+            group?.materials
+                .map((material) => getMaterialRepository(material.kind).resourceKey(material))
+                .filter((key): key is string => key !== undefined) ?? [];
         const deleted = await this.groups.delete(courseId, groupId);
         await Promise.all(resourceKeys.map((key) => this.storage.cleanup(key)));
         return deleted;
@@ -76,25 +74,8 @@ export class MaterialsService {
         uploadedById: string,
         dto: CreateMaterialDto,
         file?: Express.Multer.File,
-        groupId?: string,
     ): Promise<Material> {
-        let destinationGroupId = groupId;
-        let anonymousGroupId: string | undefined;
-
-        if (destinationGroupId) {
-            const group = await this.groups.findById(courseId, destinationGroupId);
-            if (group.name === null)
-                throw new BadRequestException('Materials cannot be added to an internal solo-material group');
-        } else {
-            const group = await this.groups.create({
-                courseId,
-                position: await this.groups.nextPosition(courseId),
-                name: null,
-                description: null,
-            });
-            destinationGroupId = group.id;
-            anonymousGroupId = group.id;
-        }
+        await this.groups.findById(courseId, dto.groupId);
 
         let content: EditMaterialContent | undefined;
         try {
@@ -104,12 +85,11 @@ export class MaterialsService {
             return await this.materials.create({
                 ...content,
                 uploadedById,
-                courseGroupId: destinationGroupId,
-                position: groupId ? await this.materials.nextGroupPosition(destinationGroupId) : 0,
+                courseGroupId: dto.groupId,
+                position: await this.materials.nextGroupPosition(dto.groupId),
             });
         } catch (error) {
             if (content) await this.storage.cleanup(getMaterialRepository(content.kind).resourceKey(content));
-            if (anonymousGroupId) await this.groups.delete(courseId, anonymousGroupId).catch(() => undefined);
             throw error;
         }
     }
@@ -142,24 +122,9 @@ export class MaterialsService {
     }
 
     async moveMaterial(courseId: string, materialId: string, dto: MoveMaterialDto): Promise<Material> {
-        const material = await this.findById(courseId, materialId);
-        const sourceGroup = await this.groups.findById(courseId, material.courseGroupId);
-        let targetGroupId = dto.groupId;
-        if (!targetGroupId) {
-            const group = await this.groups.create({
-                courseId,
-                position: await this.groups.nextPosition(courseId),
-                name: null,
-                description: null,
-            });
-            targetGroupId = group.id;
-        } else {
-            await this.groups.findById(courseId, targetGroupId);
-        }
-        const moved = await this.materials.move(courseId, materialId, targetGroupId, dto.position);
-        if (sourceGroup.name === null && sourceGroup.id !== targetGroupId)
-            await this.groups.delete(courseId, sourceGroup.id);
-        return moved;
+        await this.findById(courseId, materialId);
+        await this.groups.findById(courseId, dto.groupId);
+        return this.materials.move(courseId, materialId, dto.groupId, dto.position);
     }
 
     async delete(courseId: string, materialId: string): Promise<boolean> {
@@ -167,14 +132,6 @@ export class MaterialsService {
         const deleted = await this.materials.delete(courseId, materialId);
         await this.storage.cleanup(getMaterialRepository(material.kind).resourceKey(material));
 
-        const group = await this.groups.findById(courseId, material.courseGroupId);
-        if (group.name === null) await this.groups.delete(courseId, group.id);
         return deleted;
-    }
-
-    private async findPublicGroup(courseId: string, groupId: string): Promise<CourseGroup> {
-        const group = await this.groups.findById(courseId, groupId);
-        if (group.name === null) throw new BadRequestException('Solo-material groups are internal');
-        return group;
     }
 }

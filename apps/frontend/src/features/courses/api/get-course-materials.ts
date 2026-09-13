@@ -37,17 +37,15 @@ export interface MaterialGroup {
     id: string;
     courseId: string;
     position: number;
-    name: string | null;
+    name: string;
     description: string | null;
     materials: CourseMaterial[];
     createdAt: string;
     updatedAt: string;
 }
 
-export type CourseContentElement = MaterialGroup | CourseMaterial;
-
-export const getCourseMaterialsRequest = (courseId: string): Promise<CourseContentElement[]> =>
-    apiClient<CourseContentElement[]>(`/courses/${courseId}/materials`);
+export const getCourseMaterialsRequest = (courseId: string): Promise<MaterialGroup[]> =>
+    apiClient<MaterialGroup[]>(`/courses/${courseId}/materials`);
 
 export const getCourseMaterialUrlRequest = (courseId: string, materialId: string): Promise<{ url: string }> =>
     apiClient<{ url: string }>(`/courses/${courseId}/materials/${materialId}/url`);

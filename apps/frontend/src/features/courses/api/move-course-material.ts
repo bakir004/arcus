@@ -4,7 +4,7 @@ import { apiClient } from '@/api/api-client';
 export interface MoveCourseMaterialInput {
     courseId: string;
     materialId: string;
-    groupId: string | null;
+    groupId: string;
     position: number;
 }
 

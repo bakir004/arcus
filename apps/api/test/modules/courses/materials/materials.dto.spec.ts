@@ -8,11 +8,14 @@ async function errors(value: unknown, Dto: new () => object = CreateMaterialDto)
     );
 }
 
+const GROUP_ID = '11111111-1111-4111-8111-111111111111';
+
 describe('material DTOs', () => {
     it('accepts an input object and parses its multipart JSON representation', async () => {
-        expect(await errors({ input: { kind: 'TEXT', textContent: 'Notes' } })).toEqual([]);
+        expect(await errors({ input: { kind: 'TEXT', textContent: 'Notes' }, groupId: GROUP_ID })).toEqual([]);
         const dto = plainToInstance(CreateMaterialDto, {
             input: JSON.stringify({ kind: 'LINK', title: 'Docs', externalUrl: 'https://example.com' }),
+            groupId: GROUP_ID,
         });
         expect(await validate(dto)).toEqual([]);
         expect(dto.input).toEqual({ kind: 'LINK', title: 'Docs', externalUrl: 'https://example.com' });
@@ -28,7 +31,7 @@ describe('material DTOs', () => {
         expect(
             await errors({
                 input: { kind: 'TEXT', textContent: 'Notes' },
-                groupId: '11111111-1111-4111-8111-111111111111',
+                groupId: GROUP_ID,
             }),
         ).toEqual([]);
         expect(await errors({ input: { kind: 'TEXT', textContent: 'Notes' }, groupId: 'bad' })).not.toEqual([]);

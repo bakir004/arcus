@@ -1,3 +1,5 @@
+import { createIsomorphicFn } from '@tanstack/react-start';
+
 /** API origin/prefix shared by browser and frontend-server requests. */
 const BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
 const API_VERSION = import.meta.env.VITE_API_VERSION ?? 'v1';
@@ -30,14 +32,23 @@ function buildQueryString(params?: Record<string, unknown>): string {
  * Resolves a relative base URL for Node's fetch during SSR.
  * Browsers resolve `/api` against the current origin automatically; Node fetch does not.
  */
+const getServerRequestHeader = createIsomorphicFn()
+    .client((_name: string): string | undefined => undefined)
+    .server(async (name: string): Promise<string | undefined> => {
+        const { getServerRequestHeader: getHeader } = await import('./api-client.server');
+        return getHeader(name);
+    });
+
 async function resolveServerBaseUrl(baseUrl: string): Promise<string> {
     if (!import.meta.env.SSR || !baseUrl.startsWith('/')) return baseUrl;
 
-    const { getServerRequestHeader } = await import('./api-client.server');
     const protocol =
-        getServerRequestHeader('x-forwarded-proto') ??
-        (getServerRequestHeader('host')?.includes('localhost') ? 'http' : 'https');
-    const host = getServerRequestHeader('x-forwarded-host') ?? getServerRequestHeader('host') ?? 'localhost:3000';
+        (await getServerRequestHeader('x-forwarded-proto')) ??
+        ((await getServerRequestHeader('host'))?.includes('localhost') ? 'http' : 'https');
+    const host =
+        (await getServerRequestHeader('x-forwarded-host')) ??
+        (await getServerRequestHeader('host')) ??
+        'localhost:3000';
 
     return `${protocol}://${host}${baseUrl}`;
 }
@@ -49,8 +60,7 @@ async function resolveServerBaseUrl(baseUrl: string): Promise<string> {
 async function forwardServerCookie(headers: Headers): Promise<void> {
     if (!import.meta.env.SSR || headers.has('cookie')) return;
 
-    const { getServerRequestHeader } = await import('./api-client.server');
-    const cookie = getServerRequestHeader('cookie');
+    const cookie = await getServerRequestHeader('cookie');
     if (cookie) headers.set('cookie', cookie);
 }
 

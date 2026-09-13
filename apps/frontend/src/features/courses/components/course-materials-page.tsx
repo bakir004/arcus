@@ -18,6 +18,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Box, Group } from '@/components/common';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSub,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -32,7 +41,6 @@ import {
 } from '@/components/ui/dialog';
 import {
     getCourseMaterialUrlRequest,
-    type CourseContentElement,
     type CourseMaterial,
     type MaterialGroup,
     useGetCourseMaterials,
@@ -41,9 +49,13 @@ import { useGetCourseByCode } from '@/features/courses/api/get-course';
 import { useGetCourseMe } from '@/features/courses/api/get-course-me';
 import { useCreateCourseMaterial } from '@/features/courses/api/create-course-material';
 import { useCreateCourseMaterialGroup } from '@/features/courses/api/create-course-material-group';
+import { useUpdateCourseMaterial } from '@/features/courses/api/update-course-material';
+import { useDeleteCourseMaterial } from '@/features/courses/api/delete-course-material';
 import { useMoveCourseMaterial } from '@/features/courses/api/move-course-material';
 import { useMoveCourseMaterialGroup } from '@/features/courses/api/move-course-material-group';
 import {
+    ArrowUpDown,
+    CornerUpRight,
     ChevronDown,
     ClipboardList,
     Copy,
@@ -59,7 +71,10 @@ import {
     Search,
     Video,
     Loader2,
+    MoreVertical,
+    Pencil,
     Plus,
+    Trash2,
     Upload,
 } from 'lucide-react';
 
@@ -73,9 +88,6 @@ function SimpleIcon({ icon }: { icon: SimpleIconData }) {
     );
 }
 
-function isGroup(item: CourseContentElement): item is MaterialGroup {
-    return 'materials' in item;
-}
 function title(material: CourseMaterial) {
     return material.kind === 'TEXT' ? 'Text note' : material.title;
 }
@@ -91,7 +103,7 @@ function slugify(value: string) {
     );
 }
 function groupAnchor(group: MaterialGroup, index: number) {
-    return `group-${slugify(group.name ?? 'root')}-${index + 1}`;
+    return `group-${slugify(group.name)}-${index + 1}`;
 }
 function scrollToGroup(anchorId: string) {
     document.getElementById(anchorId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -135,6 +147,14 @@ function previewable(material: CourseMaterial) {
         ext !== 'csv'
     );
 }
+function isPlatformLink(value: string) {
+    try {
+        const origin = typeof window !== 'undefined' ? window.location.origin : undefined;
+        return origin !== undefined && new URL(value, origin).origin === origin;
+    } catch {
+        return false;
+    }
+}
 function isValidHttpUrl(value: string) {
     try {
         const url = new URL(value.trim());
@@ -150,7 +170,11 @@ function bytes(value: number | null) {
     return `${(value / 1048576).toFixed(1)} MB`;
 }
 function icon(material: CourseMaterial) {
-    if (material.kind === 'LINK') return { Icon: LinkIcon, color: 'text-cyan-500 bg-cyan-500/10' };
+    if (material.kind === 'LINK')
+        return {
+            Icon: isPlatformLink(material.externalUrl) ? CornerUpRight : LinkIcon,
+            color: isPlatformLink(material.externalUrl) ? 'text-yellow-500 bg-yellow-500/10' : 'text-cyan-500 bg-cyan-500/10',
+        };
     if (material.kind === 'TEXT') return { Icon: FileText, color: 'text-foreground bg-muted' };
     if (extension(material.fileName) === 'sql') return { Icon: Database, color: 'text-emerald-500 bg-emerald-500/10' };
     const codeIcons: Record<string, { simpleIcon: SimpleIconData; color: string }> = {
@@ -255,13 +279,50 @@ function CodeDialog({
     );
 }
 
+function DeleteCourseMaterialDialog({
+    name,
+    open,
+    onOpenChange,
+    onConfirm,
+    pending,
+}: {
+    name: string;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    onConfirm: () => void;
+    pending: boolean;
+}) {
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Delete course material?</DialogTitle>
+                    <DialogDescription>
+                        This will permanently delete “{name}”. This action cannot be undone.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                        Cancel
+                    </Button>
+                    <Button type="button" variant="destructive" disabled={pending} onClick={onConfirm}>
+                        {pending && <Loader2 className="size-4 animate-spin" />} Delete
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 function MaterialRow({
     courseId,
     material,
+    groups,
     dragHandle,
 }: {
     courseId: string;
     material: CourseMaterial;
+    groups: MaterialGroup[];
     dragHandle: React.ReactNode;
 }) {
     const materialIcon = icon(material);
@@ -269,6 +330,10 @@ function MaterialRow({
     const [dialog, setDialog] = useState(false);
     const [code, setCode] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [editOpen, setEditOpen] = useState(false);
+    const [deleteOpen, setDeleteOpen] = useState(false);
+    const moveMaterial = useMoveCourseMaterial();
+    const deleteMaterial = useDeleteCourseMaterial();
     const fileName =
         material.kind === 'FILE'
             ? (material.fileName ?? material.title)
@@ -276,9 +341,11 @@ function MaterialRow({
               ? material.title
               : 'Text note';
     const lang = material.kind === 'FILE' ? language(material.fileName) : null;
+    const platformLink = material.kind === 'LINK' && isPlatformLink(material.externalUrl);
     const open = async () => {
         if (material.kind === 'LINK') {
-            window.open(material.externalUrl, '_blank', 'noopener,noreferrer');
+            if (platformLink) window.location.assign(material.externalUrl);
+            else window.open(material.externalUrl, '_blank', 'noopener,noreferrer');
             return;
         }
         if (material.kind !== 'FILE' || !previewable(material)) return;
@@ -310,10 +377,50 @@ function MaterialRow({
     };
     if (material.kind === 'TEXT')
         return (
-            <div className="flex gap-3 px-5 py-5 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
-                {dragHandle}
-                {material.textContent}
-            </div>
+            <>
+                <div className="flex items-start gap-3 px-5 py-5 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
+                    {dragHandle}
+                    <div className="min-w-0 flex-1">{material.textContent}</div>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button type="button" aria-label={`Actions for ${title(material)}`} className="-ml-2 flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
+                                <MoreVertical className="size-4" />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-44">
+                            <DropdownMenuItem onSelect={() => setEditOpen(true)}><Pencil /> Edit</DropdownMenuItem>
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                    <ArrowUpDown /> Move to
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent>
+                                    {groups.map((group) => (
+                                        <DropdownMenuItem key={group.id} disabled={group.id === material.courseGroupId} onSelect={() => void moveMaterial.mutateAsync({ courseId, materialId: material.id, groupId: group.id, position: group.materials.length }).catch(() => toast.error('Failed to move material.'))}>
+                                            {group.name}
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                            <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
+                                <Trash2 /> Delete
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+                <EditCourseMaterialDialog courseId={courseId} material={material} open={editOpen} onOpenChange={setEditOpen} />
+                <DeleteCourseMaterialDialog
+                    name={title(material)}
+                    open={deleteOpen}
+                    onOpenChange={setDeleteOpen}
+                    pending={deleteMaterial.isPending}
+                    onConfirm={() =>
+                        void deleteMaterial
+                            .mutateAsync({ courseId, materialId: material.id })
+                            .then(() => setDeleteOpen(false))
+                            .catch(() => toast.error('Failed to delete material.'))
+                    }
+                />
+            </>
         );
     return (
         <>
@@ -344,10 +451,9 @@ function MaterialRow({
                 {material.kind === 'LINK' ? (
                     <a
                         href={material.externalUrl}
-                        target="_blank"
-                        rel="noreferrer"
+                        {...(platformLink ? {} : { target: '_blank', rel: 'noreferrer' })}
                         aria-label={`Open ${material.title}`}
-                        className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                        className="flex size-8 shrink-0 items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground"
                     >
                         <ExternalLink className="size-4" />
                     </a>
@@ -368,7 +474,69 @@ function MaterialRow({
                         </Tooltip>
                     </TooltipProvider>
                 )}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button
+                            type="button"
+                            aria-label={`Actions for ${title(material)}`}
+                            className="-ml-2 flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                        >
+                            <MoreVertical className="size-4" />
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+                            <Pencil /> Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>
+                                <ArrowUpDown /> Move to
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent>
+                                {groups.map((group) => (
+                                    <DropdownMenuItem
+                                        key={group.id}
+                                        disabled={group.id === material.courseGroupId}
+                                        onSelect={() =>
+                                            void moveMaterial
+                                                .mutateAsync({
+                                                    courseId,
+                                                    materialId: material.id,
+                                                    groupId: group.id,
+                                                    position: group.materials.length,
+                                                })
+                                                .catch(() => toast.error('Failed to move material.'))
+                                        }
+                                    >
+                                        {group.name}
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                        <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
+                            <Trash2 /> Delete
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
+            <EditCourseMaterialDialog
+                courseId={courseId}
+                material={material}
+                open={editOpen}
+                onOpenChange={setEditOpen}
+            />
+            <DeleteCourseMaterialDialog
+                name={title(material)}
+                open={deleteOpen}
+                onOpenChange={setDeleteOpen}
+                pending={deleteMaterial.isPending}
+                onConfirm={() =>
+                    void deleteMaterial
+                        .mutateAsync({ courseId, materialId: material.id })
+                        .then(() => setDeleteOpen(false))
+                        .catch(() => toast.error('Failed to delete material.'))
+                }
+            />
             {lang && (
                 <CodeDialog
                     open={dialog}
@@ -383,7 +551,15 @@ function MaterialRow({
     );
 }
 
-function SortableMaterial({ courseId, material }: { courseId: string; material: CourseMaterial }) {
+function SortableMaterial({
+    courseId,
+    material,
+    groups,
+}: {
+    courseId: string;
+    material: CourseMaterial;
+    groups: MaterialGroup[];
+}) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: material.id });
     return (
         <div
@@ -394,6 +570,7 @@ function SortableMaterial({ courseId, material }: { courseId: string; material: 
             <MaterialRow
                 courseId={courseId}
                 material={material}
+                groups={groups}
                 dragHandle={
                     <button
                         type="button"
@@ -413,10 +590,12 @@ function SortableMaterial({ courseId, material }: { courseId: string; material: 
 function SortableGroupCard({
     courseId,
     group,
+    allGroups,
     anchorId,
 }: {
     courseId: string;
     group: MaterialGroup;
+    allGroups: MaterialGroup[];
     anchorId?: string;
 }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: group.id });
@@ -429,6 +608,7 @@ function SortableGroupCard({
             <GroupCard
                 courseId={courseId}
                 group={group}
+                allGroups={allGroups}
                 anchorId={anchorId}
                 groupDragHandleProps={{ ...attributes, ...listeners }}
             />
@@ -436,34 +616,16 @@ function SortableGroupCard({
     );
 }
 
-function DraggableGroup({ group }: { group: MaterialGroup }) {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-        id: `preview-${group.id}`,
-    });
-
-    return (
-        <div
-            ref={setNodeRef}
-            {...attributes}
-            {...listeners}
-            style={{ transform: CSS.Translate.toString(transform), transition: isDragging ? undefined : transition }}
-            className={`cursor-grab rounded-lg border border-border bg-card px-4 py-3 text-sm hover:bg-muted/40 active:cursor-grabbing ${isDragging ? 'opacity-70' : ''}`}
-        >
-            {group.name ?? 'Root materials'}
-        </div>
-    );
-}
-
 function GroupCard({
     courseId,
     group,
-    standalone = false,
+    allGroups,
     anchorId,
     groupDragHandleProps,
 }: {
     courseId: string;
     group: MaterialGroup;
-    standalone?: boolean;
+    allGroups: MaterialGroup[];
     anchorId?: string;
     groupDragHandleProps?: HTMLAttributes<HTMLButtonElement>;
 }) {
@@ -478,61 +640,59 @@ function GroupCard({
         const newIndex = materials.findIndex((item) => item.id === over.id);
         if (oldIndex < 0 || newIndex < 0) return;
         setMaterials((current) => arrayMove(current, oldIndex, newIndex));
-        if (!standalone)
-            void moveMaterial
-                .mutateAsync({ courseId, materialId: String(active.id), groupId: group.id, position: newIndex })
-                .catch(() => toast.error('Failed to save material order.'));
+        void moveMaterial
+            .mutateAsync({ courseId, materialId: String(active.id), groupId: group.id, position: newIndex })
+            .catch(() => toast.error('Failed to save material order.'));
     };
     return (
         <section
             id={anchorId}
             data-group-id={group.id}
-            data-group-name={group.name ?? ''}
-            className={`scroll-mt-24 overflow-hidden rounded-lg border ${group.name === null ? 'border-red-500 bg-red-500/10' : 'border-border bg-card'}`}
+            data-group-name={group.name}
+            className="scroll-mt-24 overflow-hidden rounded-lg border border-border bg-card"
         >
-            {!standalone && (
-                <Group
-                    gap={4}
-                    className="cursor-pointer px-5 py-5 transition-colors hover:bg-muted/50"
-                    onClick={() => setCollapsed((value) => !value)}
+            <Group
+                gap={4}
+                className="cursor-pointer px-5 py-5 transition-colors hover:bg-muted/50"
+                onClick={() => setCollapsed((value) => !value)}
+            >
+                <button
+                    type="button"
+                    {...groupDragHandleProps}
+                    aria-label={`Drag ${group.name}`}
+                    className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
+                    onClick={(event) => event.stopPropagation()}
                 >
-                    <button
-                        type="button"
-                        {...groupDragHandleProps}
-                        aria-label={`Drag ${group.name ?? 'root materials'}`}
-                        className="flex size-7 shrink-0 cursor-grab items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
-                        onClick={(event) => event.stopPropagation()}
-                    >
-                        <GripVertical className="size-4" />
-                    </button>
-                    <Box className="flex size-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
-                        <ClipboardList className="size-5" />
-                    </Box>
-                    <div className="min-w-0 flex-1">
-                        <Group gap={2}>
-                            <h2 className="truncate font-semibold">{group.name ?? 'Root materials'}</h2>
-                            <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
-                                {materials.length} {materials.length === 1 ? 'item' : 'items'}
-                            </span>
-                        </Group>
-                        {group.description && <p className="mt-1 text-sm text-muted-foreground">{group.description}</p>}
-                    </div>
-                    <ChevronDown
-                        className={`size-4 shrink-0 text-muted-foreground transition-transform ${collapsed ? '-rotate-90' : ''}`}
-                    />
-                </Group>
-            )}
+                    <GripVertical className="size-4" />
+                </button>
+                <Box className="flex size-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
+                    <ClipboardList className="size-5" />
+                </Box>
+                <div className="min-w-0 flex-1">
+                    <Group gap={2}>
+                        <h2 className="truncate font-semibold">{group.name}</h2>
+                        <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                            {materials.length} {materials.length === 1 ? 'item' : 'items'}
+                        </span>
+                    </Group>
+                    {group.description && <p className="mt-1 text-sm text-muted-foreground">{group.description}</p>}
+                </div>
+                <ChevronDown
+                    className={`size-4 shrink-0 text-muted-foreground transition-transform ${collapsed ? '-rotate-90' : ''}`}
+                />
+            </Group>
             {!collapsed && (
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={reorder}>
                     <SortableContext items={materials.map((item) => item.id)} strategy={verticalListSortingStrategy}>
-                        <div
-                            className={
-                                standalone ? 'divide-y divide-border' : 'divide-y divide-border border-t border-border'
-                            }
-                        >
+                        <div className="divide-y divide-border border-t border-border">
                             {materials.length ? (
                                 materials.map((material) => (
-                                    <SortableMaterial key={material.id} courseId={courseId} material={material} />
+                                    <SortableMaterial
+                                        key={material.id}
+                                        courseId={courseId}
+                                        material={material}
+                                        groups={allGroups}
+                                    />
                                 ))
                             ) : (
                                 <p className="px-5 py-6 text-sm text-muted-foreground">
@@ -623,6 +783,102 @@ function CreateCourseMaterialGroupDialog({
     );
 }
 
+function EditCourseMaterialDialog({
+    courseId,
+    material,
+    open,
+    onOpenChange,
+}: {
+    courseId: string;
+    material: CourseMaterial;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+}) {
+    const [titleValue, setTitleValue] = useState('');
+    const [description, setDescription] = useState('');
+    const [externalUrl, setExternalUrl] = useState('');
+    const [textContent, setTextContent] = useState('');
+    const [file, setFile] = useState<File | undefined>();
+    const updateMaterial = useUpdateCourseMaterial();
+
+    useEffect(() => {
+        setFile(undefined);
+        if (material.kind === 'TEXT') setTextContent(material.textContent);
+        if (material.kind === 'LINK') {
+            setTitleValue(material.title);
+            setDescription(material.description ?? '');
+            setExternalUrl(material.externalUrl);
+        }
+        if (material.kind === 'FILE') {
+            setTitleValue(material.title);
+            setDescription(material.description ?? '');
+        }
+    }, [material]);
+
+    const submit = async (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const input =
+            material.kind === 'TEXT'
+                ? { kind: 'TEXT' as const, textContent }
+                : material.kind === 'LINK'
+                  ? { kind: 'LINK' as const, title: titleValue, description, externalUrl: externalUrl.trim() }
+                  : { kind: 'FILE' as const, title: titleValue, description };
+        try {
+            await updateMaterial.mutateAsync({ courseId, materialId: material.id, input, file });
+            toast.success('Course material updated.');
+            onOpenChange(false);
+        } catch {
+            toast.error('Failed to update course material.');
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <form onSubmit={submit} className="space-y-5">
+                    <DialogHeader>
+                        <DialogTitle>Edit course material</DialogTitle>
+                        <DialogDescription>Update this course material.</DialogDescription>
+                    </DialogHeader>
+                    {material.kind !== 'TEXT' && (
+                        <>
+                            <div className="space-y-2">
+                                <Label htmlFor={`edit-title-${material.id}`}>Title</Label>
+                                <Input id={`edit-title-${material.id}`} value={titleValue} onChange={(event) => setTitleValue(event.target.value)} required />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor={`edit-description-${material.id}`}>Description</Label>
+                                <textarea id={`edit-description-${material.id}`} value={description} onChange={(event) => setDescription(event.target.value)} className="min-h-20 w-full rounded-lg border border-border bg-card p-2 text-sm" />
+                            </div>
+                            {material.kind === 'FILE' && (
+                                <div className="space-y-2">
+                                    <Label htmlFor={`edit-file-${material.id}`}>Replace file (optional)</Label>
+                                    <Input id={`edit-file-${material.id}`} type="file" onChange={(event) => setFile(event.target.files?.[0])} />
+                                </div>
+                            )}
+                            {material.kind === 'LINK' && (
+                                <div className="space-y-2">
+                                    <Label htmlFor={`edit-url-${material.id}`}>URL</Label>
+                                    <Input id={`edit-url-${material.id}`} type="url" value={externalUrl} onChange={(event) => setExternalUrl(event.target.value)} required />
+                                </div>
+                            )}
+                        </>
+                    )}
+                    {material.kind === 'TEXT' && (
+                        <div className="space-y-2">
+                            <Label htmlFor={`edit-text-${material.id}`}>Text</Label>
+                            <textarea id={`edit-text-${material.id}`} value={textContent} onChange={(event) => setTextContent(event.target.value)} className="min-h-32 w-full rounded-lg border border-border bg-card p-2 text-sm" required />
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button type="submit" disabled={updateMaterial.isPending}>Save</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 function CreateCourseMaterialDialog({
     courseId,
     groups,
@@ -634,17 +890,20 @@ function CreateCourseMaterialDialog({
 }) {
     const [open, setOpen] = useState(false);
     const [kind, setKind] = useState<'FILE' | 'LINK' | 'TEXT'>('FILE');
-    const [groupId, setGroupId] = useState('');
+    const [groupId, setGroupId] = useState(groups[0]?.id ?? '');
     const [titleValue, setTitleValue] = useState('');
     const [description, setDescription] = useState('');
     const [externalUrl, setExternalUrl] = useState('');
     const [textContent, setTextContent] = useState('');
     const [file, setFile] = useState<File | undefined>();
     const createMaterial = useCreateCourseMaterial();
+    useEffect(() => {
+        if (!groups.some((group) => group.id === groupId)) setGroupId(groups[0]?.id ?? '');
+    }, [groups, groupId]);
 
     const reset = () => {
         setKind('FILE');
-        setGroupId('');
+        setGroupId(groups[0]?.id ?? '');
         setTitleValue('');
         setDescription('');
         setExternalUrl('');
@@ -661,6 +920,10 @@ function CreateCourseMaterialDialog({
             toast.error('Enter a valid HTTP or HTTPS URL.');
             return;
         }
+        if (!groupId) {
+            toast.error('Choose a course group.');
+            return;
+        }
         const input =
             kind === 'FILE'
                 ? { kind, title: titleValue, description }
@@ -668,9 +931,9 @@ function CreateCourseMaterialDialog({
                   ? { kind, title: titleValue, description, externalUrl: externalUrl.trim() }
                   : { kind, textContent };
         try {
-            await createMaterial.mutateAsync({ courseId, groupId: groupId || null, input, file });
+            await createMaterial.mutateAsync({ courseId, groupId, input, file });
             toast.success('Course material created.');
-            onCreated?.(groupId || null);
+            onCreated?.(groupId);
             reset();
             setOpen(false);
         } catch {
@@ -713,7 +976,6 @@ function CreateCourseMaterialDialog({
                             onChange={(event) => setGroupId(event.target.value)}
                             className="h-9 w-full rounded-lg border border-border bg-card px-2.5 text-sm"
                         >
-                            <option value="">None</option>
                             {groups.map((group) => (
                                 <option key={group.id} value={group.id}>
                                     {group.name}
@@ -804,20 +1066,14 @@ export function CourseMaterialsPage() {
     const { data: courseMe } = useGetCourseMe(course?.id ?? '');
     const [search, setSearch] = useState('');
     const [scrollTarget, setScrollTarget] = useState<string | null | undefined>();
-    const materialGroups = useMemo(
-        () => (content ?? []).filter(isGroup).filter((group) => group.name !== null),
-        [content],
-    );
+    const materialGroups = content ?? [];
     const canCreateMaterial = courseMe?.permissions.includes('course:material:create') ?? false;
     const moveGroup = useMoveCourseMaterialGroup();
     const queryClient = useQueryClient();
     const groupSensors = useSensors(useSensor(PointerSensor));
-    const previewSensors = useSensors(useSensor(PointerSensor));
     const groups = useMemo(() => {
         const q = search.toLowerCase().trim();
-        return (content ?? [])
-            .filter(isGroup)
-            .map((group) => ({
+        return (content ?? []).map((group) => ({
                 group: {
                     ...group,
                     materials: group.materials.filter(
@@ -833,7 +1089,7 @@ export function CourseMaterialsPage() {
     const [orderedGroups, setOrderedGroups] = useState<typeof groups>([]);
     useEffect(() => {
         if (!search.trim()) setOrderedGroups(groups);
-    }, [content, search]);
+    }, [groups, search]);
     const displayedGroups = search.trim() ? groups : orderedGroups.length ? orderedGroups : groups;
     const reorderGroups = (activeId: string, overId: string) => {
         if (activeId === overId || search.trim()) return;
@@ -853,13 +1109,6 @@ export function CourseMaterialsPage() {
     };
     const handleGroupDragEnd = ({ active, over }: DragEndEvent) => {
         if (over) reorderGroups(String(active.id), String(over.id));
-    };
-    const reorderPreviewGroups = ({ active, over }: DragEndEvent) => {
-        if (over)
-            reorderGroups(
-                String(active.id).replace(/^preview-/, ''),
-                String(over.id).replace(/^preview-/, ''),
-            );
     };
     useEffect(() => {
         if (scrollTarget === undefined) return;
@@ -890,30 +1139,6 @@ export function CourseMaterialsPage() {
     return (
         <Box as="main" className="mx-auto flex w-full max-w-7xl gap-8 px-6 py-10">
             <Box className="min-w-0 flex-1">
-                {!search.trim() && !isLoading && !isError && groups.length > 0 && (
-                    <div className="mb-6" data-testid="course-groups-dnd">
-                        <div className="mb-3 flex items-center justify-between">
-                            <h2 className="text-sm font-semibold">Course groups</h2>
-                            <span className="text-xs text-muted-foreground">Drag to reorder</span>
-                        </div>
-                        <DndContext
-                            sensors={previewSensors}
-                            collisionDetection={closestCenter}
-                            onDragEnd={reorderPreviewGroups}
-                        >
-                            <SortableContext
-                                items={displayedGroups.map(({ group }) => `preview-${group.id}`)}
-                                strategy={verticalListSortingStrategy}
-                            >
-                                <div className="flex flex-col gap-3" role="list" aria-label="Course groups">
-                                    {displayedGroups.map(({ group }) => (
-                                        <DraggableGroup key={group.id} group={group} />
-                                    ))}
-                                </div>
-                            </SortableContext>
-                        </DndContext>
-                    </div>
-                )}
                 {canCreateMaterial && (
                     <div className="mb-4 flex flex-wrap justify-end gap-2">
                         <CreateCourseMaterialGroupDialog courseId={course.id} onCreated={setScrollTarget} />
@@ -953,6 +1178,7 @@ export function CourseMaterialsPage() {
                                         key={group.id}
                                         courseId={course.id}
                                         group={group}
+                                        allGroups={materialGroups}
                                         anchorId={groupAnchor(group, index)}
                                     />
                                 ))}
