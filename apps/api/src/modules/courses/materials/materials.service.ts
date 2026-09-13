@@ -3,7 +3,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import type { CreateMaterialDto, CreateMaterialGroupDto, EditMaterialDto, EditMaterialGroupDto } from './materials.dto';
 import type { CourseContentElement, CourseGroup, EditMaterialContent, Material } from './materials.entity';
 import { MaterialsRepository } from './materials.repository';
-import { CourseGroupsRepository } from './repositories/course-groups.repository';
+import { CourseGroupsRepository } from './groups.repository';
 
 @Injectable()
 export class MaterialsService {
