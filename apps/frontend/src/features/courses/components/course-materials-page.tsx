@@ -436,6 +436,24 @@ function SortableGroupCard({
     );
 }
 
+function DraggableGroup({ group }: { group: MaterialGroup }) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+        id: `preview-${group.id}`,
+    });
+
+    return (
+        <div
+            ref={setNodeRef}
+            {...attributes}
+            {...listeners}
+            style={{ transform: CSS.Translate.toString(transform), transition: isDragging ? undefined : transition }}
+            className={`cursor-grab rounded-lg border border-border bg-card px-4 py-3 text-sm hover:bg-muted/40 active:cursor-grabbing ${isDragging ? 'opacity-70' : ''}`}
+        >
+            {group.name ?? 'Root materials'}
+        </div>
+    );
+}
+
 function GroupCard({
     courseId,
     group,
@@ -794,6 +812,7 @@ export function CourseMaterialsPage() {
     const moveGroup = useMoveCourseMaterialGroup();
     const queryClient = useQueryClient();
     const groupSensors = useSensors(useSensor(PointerSensor));
+    const previewSensors = useSensors(useSensor(PointerSensor));
     const groups = useMemo(() => {
         const q = search.toLowerCase().trim();
         return (content ?? [])
@@ -811,13 +830,19 @@ export function CourseMaterialsPage() {
             }))
             .filter(({ group }) => group.materials.length || (!q && group.materials.length === 0));
     }, [content, search]);
-    const reorderGroups = ({ active, over }: DragEndEvent) => {
-        if (!over || active.id === over.id || search.trim()) return;
-        const oldIndex = groups.findIndex(({ group }) => group.id === String(active.id));
-        const newIndex = groups.findIndex(({ group }) => group.id === String(over.id));
+    const [orderedGroups, setOrderedGroups] = useState<typeof groups>([]);
+    useEffect(() => {
+        if (!search.trim()) setOrderedGroups(groups);
+    }, [content, search]);
+    const displayedGroups = search.trim() ? groups : orderedGroups.length ? orderedGroups : groups;
+    const reorderGroups = (activeId: string, overId: string) => {
+        if (activeId === overId || search.trim()) return;
+        const oldIndex = displayedGroups.findIndex(({ group }) => group.id === activeId);
+        const newIndex = displayedGroups.findIndex(({ group }) => group.id === overId);
         if (oldIndex < 0 || newIndex < 0) return;
+        setOrderedGroups((current) => arrayMove(current, oldIndex, newIndex));
         void moveGroup
-            .mutateAsync({ courseId: course?.id ?? '', groupId: String(active.id), position: newIndex })
+            .mutateAsync({ courseId: course?.id ?? '', groupId: activeId, position: newIndex })
             .catch(() => {
                 void queryClient.refetchQueries({
                     queryKey: ['courses', course?.id ?? '', 'materials'],
@@ -825,6 +850,16 @@ export function CourseMaterialsPage() {
                 });
                 toast.error('Failed to save group order.');
             });
+    };
+    const handleGroupDragEnd = ({ active, over }: DragEndEvent) => {
+        if (over) reorderGroups(String(active.id), String(over.id));
+    };
+    const reorderPreviewGroups = ({ active, over }: DragEndEvent) => {
+        if (over)
+            reorderGroups(
+                String(active.id).replace(/^preview-/, ''),
+                String(over.id).replace(/^preview-/, ''),
+            );
     };
     useEffect(() => {
         if (scrollTarget === undefined) return;
@@ -855,6 +890,30 @@ export function CourseMaterialsPage() {
     return (
         <Box as="main" className="mx-auto flex w-full max-w-7xl gap-8 px-6 py-10">
             <Box className="min-w-0 flex-1">
+                {!search.trim() && !isLoading && !isError && groups.length > 0 && (
+                    <div className="mb-6" data-testid="course-groups-dnd">
+                        <div className="mb-3 flex items-center justify-between">
+                            <h2 className="text-sm font-semibold">Course groups</h2>
+                            <span className="text-xs text-muted-foreground">Drag to reorder</span>
+                        </div>
+                        <DndContext
+                            sensors={previewSensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={reorderPreviewGroups}
+                        >
+                            <SortableContext
+                                items={displayedGroups.map(({ group }) => `preview-${group.id}`)}
+                                strategy={verticalListSortingStrategy}
+                            >
+                                <div className="flex flex-col gap-3" role="list" aria-label="Course groups">
+                                    {displayedGroups.map(({ group }) => (
+                                        <DraggableGroup key={group.id} group={group} />
+                                    ))}
+                                </div>
+                            </SortableContext>
+                        </DndContext>
+                    </div>
+                )}
                 {canCreateMaterial && (
                     <div className="mb-4 flex flex-wrap justify-end gap-2">
                         <CreateCourseMaterialGroupDialog courseId={course.id} onCreated={setScrollTarget} />
@@ -883,13 +942,13 @@ export function CourseMaterialsPage() {
                         <div className="rounded-lg border border-border bg-card p-8 text-center text-destructive">
                             Unable to load course materials.
                         </div>
-                    ) : groups.length ? (
-                        <DndContext sensors={groupSensors} collisionDetection={closestCenter} onDragEnd={reorderGroups}>
+                    ) : displayedGroups.length ? (
+                        <DndContext sensors={groupSensors} collisionDetection={closestCenter} onDragEnd={handleGroupDragEnd}>
                             <SortableContext
-                                items={groups.map(({ group }) => group.id)}
+                                items={displayedGroups.map(({ group }) => group.id)}
                                 strategy={verticalListSortingStrategy}
                             >
-                                {groups.map(({ group }, index) => (
+                                {displayedGroups.map(({ group }, index) => (
                                     <SortableGroupCard
                                         key={group.id}
                                         courseId={course.id}
@@ -918,7 +977,7 @@ export function CourseMaterialsPage() {
                         >
                             Materials
                         </a>
-                        {groups.map(({ group }, index) => (
+                        {displayedGroups.map(({ group }, index) => (
                             <a
                                 key={group.id}
                                 href={`#${groupAnchor(group, index)}`}
