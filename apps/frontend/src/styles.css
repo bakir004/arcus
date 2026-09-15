@@ -249,68 +249,148 @@ body {
     }
 }
 
-/* Prism token colors mirror frontend/src/lib/monokai.json.
-   No background is set here so Prism views keep their bg-background styling. */
+/* Course text materials use the application palette instead of Typography's neutral defaults. */
+.markdown-preview {
+    color: var(--foreground);
+}
+
+.markdown-preview :where(h1, h2, h3, h4, h5, h6, strong) {
+    color: var(--foreground);
+}
+
+.markdown-preview :where(ul > li, ol > li)::marker {
+    color: var(--primary);
+    font-weight: 700;
+}
+
+.markdown-preview a {
+    color: var(--primary);
+    text-decoration-color: color-mix(in oklch, var(--primary) 55%, transparent);
+}
+
+.markdown-preview a:hover {
+    text-decoration-color: var(--primary);
+}
+
+.markdown-preview blockquote {
+    margin-inline: 0;
+    border-inline-start-color: var(--primary);
+    border-inline-start-width: 3px;
+    border-radius: 0 var(--radius) var(--radius) 0;
+    background: color-mix(in oklch, var(--primary) 8%, transparent);
+    padding-block: 0.75rem;
+    padding-inline: 1rem;
+    color: var(--muted-foreground);
+    font-style: normal;
+}
+
+.markdown-preview blockquote p:first-of-type::before,
+.markdown-preview blockquote p:last-of-type::after {
+    content: none;
+}
+
+.markdown-preview :not(pre) > code {
+    border-radius: var(--radius);
+    background: var(--muted);
+    padding: 0.125rem 0.375rem;
+    color: var(--primary);
+    font-weight: 500;
+}
+
+.markdown-preview hr {
+    border-color: color-mix(in oklch, var(--primary) 40%, var(--border));
+}
+
+.markdown-preview thead {
+    border-bottom-color: var(--border);
+}
+
+.markdown-preview tbody tr {
+    border-bottom-color: var(--border);
+}
+
+.markdown-preview :where(table, pre, pre code) {
+    @apply text-sm;
+}
+
+.markdown-preview th {
+    color: var(--foreground);
+}
+
+.markdown-preview input[type="checkbox"] {
+    accent-color: var(--primary);
+}
+
+/* Prism colors based on VS Code Dark+ and Light+. Backgrounds remain controlled by each view. */
 code[class*="language-"],
 pre[class*="language-"] {
-    color: #f8f8f2;
+    color: #d4d4d4;
 }
 
 .token.comment,
 .token.prolog,
 .token.doctype,
 .token.cdata {
-    color: #75715e;
+    color: #6a9955;
 }
 
 .token.punctuation,
-.token.property,
 .token.operator,
 .token.entity,
 .token.url,
-.token.namespace,
-.language-css .token.string,
-.style .token.string {
-    color: #f8f8f2;
+.token.namespace {
+    color: #d4d4d4;
+}
+
+.token.property,
+.token.variable,
+.token.parameter,
+.token.attr-name {
+    color: #9cdcfe;
 }
 
 .token.string,
 .token.char,
-.token.attr-value {
-    color: #e6db74;
+.token.attr-value,
+.language-css .token.string,
+.style .token.string {
+    color: #ce9178;
 }
 
 .token.number,
-.token.boolean,
 .token.constant,
 .token.symbol {
-    color: #ae81ff;
+    color: #b5cea8;
+}
+
+.token.boolean,
+.token.tag {
+    color: #569cd6;
 }
 
 .token.keyword,
 .token.atrule,
-.token.tag,
 .token.deleted {
-    color: #f92672;
+    color: #c586c0;
 }
 
-.token.function,
+.token.function {
+    color: #dcdcaa;
+}
+
 .token.class-name,
-.token.selector,
-.token.attr-name,
-.token.inserted {
-    color: #a6e22e;
-}
-
 .token.builtin {
-    color: #66d9ef;
+    color: #4ec9b0;
 }
 
-.token.variable,
-.token.parameter,
+.token.selector,
+.token.inserted {
+    color: #d7ba7d;
+}
+
 .token.regex,
 .token.important {
-    color: #fd971f;
+    color: #d16969;
 }
 
 .token.important,
@@ -318,71 +398,79 @@ pre[class*="language-"] {
     font-weight: 700;
 }
 
-.token.italic,
-.token.builtin {
+.token.italic {
     font-style: italic;
 }
 
 .prism-theme-light code[class*="language-"],
 .prism-theme-light pre[class*="language-"] {
-    color: #24292f;
+    color: #000000;
 }
 
 .prism-theme-light .token.comment,
 .prism-theme-light .token.prolog,
 .prism-theme-light .token.doctype,
 .prism-theme-light .token.cdata {
-    color: #6a737d;
+    color: #008000;
 }
 
 .prism-theme-light .token.punctuation,
-.prism-theme-light .token.property,
 .prism-theme-light .token.operator,
 .prism-theme-light .token.entity,
 .prism-theme-light .token.url,
-.prism-theme-light .token.namespace,
-.prism-theme-light .language-css .token.string,
-.prism-theme-light .style .token.string {
-    color: #24292f;
+.prism-theme-light .token.namespace {
+    color: #000000;
+}
+
+.prism-theme-light .token.property,
+.prism-theme-light .token.variable,
+.prism-theme-light .token.parameter,
+.prism-theme-light .token.attr-name {
+    color: #001080;
 }
 
 .prism-theme-light .token.string,
 .prism-theme-light .token.char,
-.prism-theme-light .token.attr-value {
-    color: #0a3069;
+.prism-theme-light .token.attr-value,
+.prism-theme-light .language-css .token.string,
+.prism-theme-light .style .token.string {
+    color: #a31515;
 }
 
 .prism-theme-light .token.number,
-.prism-theme-light .token.boolean,
 .prism-theme-light .token.constant,
 .prism-theme-light .token.symbol {
-    color: #0550ae;
+    color: #098658;
+}
+
+.prism-theme-light .token.boolean,
+.prism-theme-light .token.tag {
+    color: #0000ff;
 }
 
 .prism-theme-light .token.keyword,
 .prism-theme-light .token.atrule,
-.prism-theme-light .token.tag,
 .prism-theme-light .token.deleted {
-    color: #cf222e;
+    color: #af00db;
 }
 
-.prism-theme-light .token.function,
+.prism-theme-light .token.function {
+    color: #795e26;
+}
+
 .prism-theme-light .token.class-name,
-.prism-theme-light .token.selector,
-.prism-theme-light .token.attr-name,
-.prism-theme-light .token.inserted {
-    color: #8250df;
-}
-
 .prism-theme-light .token.builtin {
-    color: #0550ae;
+    color: #267f99;
 }
 
-.prism-theme-light .token.variable,
-.prism-theme-light .token.parameter,
+.prism-theme-light .token.selector,
+.prism-theme-light .token.inserted {
+    color: #800000;
+}
+
 .prism-theme-light .token.regex,
 .prism-theme-light .token.important {
-    color: #953800;
+    color: #811f3f;
 }
 
 .monaco-template-token {

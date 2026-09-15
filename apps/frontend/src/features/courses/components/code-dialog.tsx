@@ -1,18 +1,9 @@
 import { useState } from 'react';
-import Prism from 'prismjs';
-import 'prismjs/components/prism-c';
-import 'prismjs/components/prism-cpp';
-import 'prismjs/components/prism-css';
-import 'prismjs/components/prism-java';
-import 'prismjs/components/prism-javascript';
-import 'prismjs/components/prism-markup';
-import 'prismjs/components/prism-python';
-import 'prismjs/components/prism-sql';
-import 'prismjs/components/prism-typescript';
 import { Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useTheme } from '@/hooks/use-theme';
+import { highlightCode } from './prism';
 
 export function CodeDialog({
     open,
@@ -29,7 +20,7 @@ export function CodeDialog({
     code: string | null;
     loading: boolean;
 }) {
-    const highlighted = Prism.highlight(code ?? '', Prism.languages[lang] ?? Prism.languages.plain, lang);
+    const highlighted = highlightCode(code ?? '', lang);
     const { isDark } = useTheme();
     const [copied, setCopied] = useState(false);
     const copyCode = async () => {
@@ -79,4 +70,3 @@ export function CodeDialog({
         </Dialog>
     );
 }
-
