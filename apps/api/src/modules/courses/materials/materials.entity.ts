@@ -31,7 +31,7 @@ export type MaterialKind = MaterialInput['kind'];
 
 export type CourseGroup = typeof courseGroups.$inferSelect;
 export type CreateCourseGroup = typeof courseGroups.$inferInsert;
-export type EditCourseGroup = Partial<Pick<CreateCourseGroup, 'name' | 'description' | 'position'>>;
+export type EditCourseGroup = Partial<Pick<CreateCourseGroup, 'name' | 'description' | 'labeled' | 'position'>>;
 
 export type CourseMaterial = typeof courseMaterials.$inferSelect;
 export type CreateCourseMaterial = typeof courseMaterials.$inferInsert;

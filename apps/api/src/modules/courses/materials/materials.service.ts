@@ -40,12 +40,22 @@ export class MaterialsService {
             position: await this.groups.nextPosition(courseId),
             name: dto.name.trim(),
             description: dto.description?.trim() || null,
+            labeled: dto.labeled ?? true,
         });
     }
 
     async moveGroup(courseId: string, groupId: string, position: number): Promise<CourseGroup> {
-        await this.groups.findById(courseId, groupId);
-        return this.groups.move(courseId, groupId, position);
+        const current = await this.groups.findById(courseId, groupId);
+        const groupCount = await this.groups.countByCourseId(courseId);
+        const targetPosition = Math.max(0, Math.min(position, groupCount - 1));
+        if (targetPosition === current.position) return current;
+
+        const movingEarlier = targetPosition < current.position;
+        return this.groups.updatePositionRange(courseId, groupId, targetPosition, {
+            start: movingEarlier ? targetPosition : current.position + 1,
+            end: movingEarlier ? current.position - 1 : targetPosition,
+            offset: movingEarlier ? 1 : -1,
+        });
     }
 
     async editGroup(courseId: string, groupId: string, dto: EditMaterialGroupDto): Promise<CourseGroup> {
@@ -53,6 +63,7 @@ export class MaterialsService {
         return this.groups.update(courseId, groupId, {
             ...(dto.name === undefined ? {} : { name: dto.name.trim() }),
             ...(dto.description === undefined ? {} : { description: dto.description?.trim() || null }),
+            ...(dto.labeled === undefined ? {} : { labeled: dto.labeled }),
         });
     }
 
@@ -122,9 +133,32 @@ export class MaterialsService {
     }
 
     async moveMaterial(courseId: string, materialId: string, dto: MoveMaterialDto): Promise<Material> {
-        await this.findById(courseId, materialId);
+        const current = await this.findById(courseId, materialId);
+        const sameGroup = current.courseGroupId === dto.groupId;
+        if (sameGroup && dto.position === current.position) return current;
+
         await this.groups.findById(courseId, dto.groupId);
-        return this.materials.move(courseId, materialId, dto.groupId, dto.position);
+        const destinationCount = await this.materials.countByGroupId(dto.groupId);
+        const lastPosition = sameGroup ? destinationCount - 1 : destinationCount;
+        const targetPosition = Math.max(0, Math.min(dto.position, lastPosition));
+        if (sameGroup && targetPosition === current.position) return current;
+
+        if (sameGroup) {
+            const movingEarlier = targetPosition < current.position;
+            return this.materials.updatePositionRanges(materialId, dto.groupId, targetPosition, [
+                {
+                    groupId: dto.groupId,
+                    start: movingEarlier ? targetPosition : current.position + 1,
+                    end: movingEarlier ? current.position - 1 : targetPosition,
+                    offset: movingEarlier ? 1 : -1,
+                },
+            ]);
+        }
+
+        return this.materials.updatePositionRanges(materialId, dto.groupId, targetPosition, [
+            { groupId: current.courseGroupId, start: current.position + 1, offset: -1 },
+            { groupId: dto.groupId, start: targetPosition, offset: 1 },
+        ]);
     }
 
     async delete(courseId: string, materialId: string): Promise<boolean> {

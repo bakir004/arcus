@@ -1,6 +1,6 @@
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
-import { CreateMaterialDto, EditMaterialDto } from '@/modules/courses/materials/materials.dto';
+import { CreateMaterialDto, CreateMaterialGroupDto, EditMaterialDto } from '@/modules/courses/materials/materials.dto';
 
 async function errors(value: unknown, Dto: new () => object = CreateMaterialDto) {
     return validate(plainToInstance(Dto, value)).then((items) =>
@@ -25,6 +25,16 @@ describe('material DTOs', () => {
         expect(await errors({})).not.toEqual([]);
         expect(await errors({}, EditMaterialDto)).toEqual([]);
         expect(await errors({ input: 'not-json' }, EditMaterialDto)).not.toEqual([]);
+    });
+
+    it('requires a material group title and accepts the labeled flag', async () => {
+        await expect(errors({}, CreateMaterialGroupDto)).resolves.not.toEqual([]);
+        await expect(errors({ name: null }, CreateMaterialGroupDto)).resolves.not.toEqual([]);
+        await expect(errors({ name: '' }, CreateMaterialGroupDto)).resolves.not.toEqual([]);
+        await expect(errors({ name: 'Internal identifier', labeled: false }, CreateMaterialGroupDto)).resolves.toEqual(
+            [],
+        );
+        await expect(errors({ name: 'Group', labeled: 'false' }, CreateMaterialGroupDto)).resolves.not.toEqual([]);
     });
 
     it('validates group ids', async () => {

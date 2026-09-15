@@ -39,6 +39,7 @@ export interface MaterialGroup {
     position: number;
     name: string;
     description: string | null;
+    labeled: boolean;
     materials: CourseMaterial[];
     createdAt: string;
     updatedAt: string;

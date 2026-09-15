@@ -79,12 +79,12 @@ export function previewable(material: CourseMaterial) {
     if (NON_PREVIEWABLE_EXTENSIONS.has(ext)) return false;
     const mime = material.fileMimeType?.toLowerCase() ?? '';
     return (
-        (Boolean(language(material.fileName)) ||
-            PREVIEWABLE_EXTENSIONS.has(ext) ||
-            mime.startsWith('text/') ||
-            mime.startsWith('image/') ||
-            mime.startsWith('video/') ||
-            mime.includes('pdf'))
+        Boolean(language(material.fileName)) ||
+        PREVIEWABLE_EXTENSIONS.has(ext) ||
+        mime.startsWith('text/') ||
+        mime.startsWith('image/') ||
+        mime.startsWith('video/') ||
+        mime.includes('pdf')
     );
 }
 export function isPlatformLink(value: string) {
@@ -113,7 +113,9 @@ export function icon(material: CourseMaterial) {
     if (material.kind === 'LINK')
         return {
             Icon: isPlatformLink(material.externalUrl) ? CornerUpRight : LinkIcon,
-            color: isPlatformLink(material.externalUrl) ? 'text-yellow-500 bg-yellow-500/10' : 'text-cyan-500 bg-cyan-500/10',
+            color: isPlatformLink(material.externalUrl)
+                ? 'text-yellow-500 bg-yellow-500/10'
+                : 'text-cyan-500 bg-cyan-500/10',
         };
     if (material.kind === 'TEXT') return { Icon: FileText, color: 'text-foreground bg-muted' };
     if (SQL_EXTENSIONS.has(extension(material.fileName)))
@@ -130,4 +132,3 @@ export function icon(material: CourseMaterial) {
         return { Icon: FileType, color: 'text-sky-500 bg-sky-500/10' };
     return { Icon: FileType, color: 'text-emerald-500 bg-emerald-500/10' };
 }
-

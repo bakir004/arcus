@@ -1,15 +1,9 @@
-import { asc, courseMaterials, eq } from '@/database';
-import { sql } from 'drizzle-orm';
+import { courseMaterials } from '@/database';
+import { and, asc, count, eq, gte, lte, sql } from 'drizzle-orm';
 import type { Database } from '@/database/client';
 import { DATABASE } from '@/database/database.module';
 import { Inject, Injectable } from '@nestjs/common';
-import type {
-    CourseMaterial,
-    MaterialGroup,
-    CreateMaterial,
-    EditMaterialContent,
-    Material,
-} from './materials.entity';
+import type { CourseMaterial, MaterialGroup, CreateMaterial, EditMaterialContent, Material } from './materials.entity';
 import { MaterialNotFound } from './materials.errors';
 import { getMaterialRepository } from './materials.repository.registry';
 
@@ -48,6 +42,14 @@ export class MaterialsRepository {
         return this.toMaterial(material);
     }
 
+    async countByGroupId(courseGroupId: string): Promise<number> {
+        const [result] = await this.database
+            .select({ value: count() })
+            .from(courseMaterials)
+            .where(eq(courseMaterials.courseGroupId, courseGroupId));
+        return result?.value ?? 0;
+    }
+
     async nextGroupPosition(courseGroupId: string): Promise<number> {
         const materials = await this.database.query.courseMaterials.findMany({
             where: (material) => eq(material.courseGroupId, courseGroupId),
@@ -65,58 +67,33 @@ export class MaterialsRepository {
         return getMaterialRepository(data.kind).update(this.database, id, data);
     }
 
-    async updatePlacement(courseId: string, id: string, courseGroupId: string, position: number): Promise<Material> {
-        await this.findById(courseId, id);
-        const [material] = await this.database
-            .update(courseMaterials)
-            .set({ courseGroupId, position, updatedAt: new Date() })
-            .where(eq(courseMaterials.id, id))
-            .returning();
-        if (!material) throw MaterialNotFound(id);
-        return this.toMaterial(material);
-    }
-
-    async move(courseId: string, id: string, targetGroupId: string, position: number): Promise<Material> {
-        const current = await this.findById(courseId, id);
-        const targetGroup = await this.database.query.courseGroups.findFirst({
-            where: (group) => eq(group.id, targetGroupId),
-        });
-        if (!targetGroup || targetGroup.courseId !== courseId) throw MaterialNotFound(id);
-        const sourceId = current.courseGroupId;
-        const source = await this.database.query.courseMaterials.findMany({
-            where: (material) => eq(material.courseGroupId, sourceId),
-            orderBy: (material) => asc(material.position),
-        });
-        const destination =
-            sourceId === targetGroupId
-                ? source
-                : await this.database.query.courseMaterials.findMany({
-                      where: (material) => eq(material.courseGroupId, targetGroupId),
-                      orderBy: (material) => asc(material.position),
-                  });
-        const without = source.filter((material) => material.id !== id);
-        const target = destination.filter((material) => material.id !== id);
-        const index = Math.max(0, Math.min(position, target.length));
-        const moving = source.find((material) => material.id === id);
-        if (!moving) throw MaterialNotFound(id);
-        const moved = [...target.slice(0, index), moving, ...target.slice(index)];
+    async updatePositionRanges(
+        id: string,
+        targetGroupId: string,
+        targetPosition: number,
+        affected: { groupId: string; start: number; end?: number; offset: -1 | 1 }[],
+    ): Promise<Material> {
         return this.database.transaction(async (tx) => {
-            await tx.execute(sql`SET CONSTRAINTS course_materials_group_position_key DEFERRED`);
-            for (const [nextPosition, material] of without.entries()) {
+            const updatedAt = new Date();
+            for (const range of affected) {
                 await tx
                     .update(courseMaterials)
-                    .set({ position: nextPosition, updatedAt: new Date() })
-                    .where(eq(courseMaterials.id, material.id));
+                    .set({ position: sql`${courseMaterials.position} + ${range.offset}`, updatedAt })
+                    .where(
+                        and(
+                            eq(courseMaterials.courseGroupId, range.groupId),
+                            gte(courseMaterials.position, range.start),
+                            ...(range.end === undefined ? [] : [lte(courseMaterials.position, range.end)]),
+                        ),
+                    );
             }
-            for (const [nextPosition, material] of moved.entries()) {
-                await tx
-                    .update(courseMaterials)
-                    .set({ courseGroupId: targetGroupId, position: nextPosition, updatedAt: new Date() })
-                    .where(eq(courseMaterials.id, material.id));
-            }
-            const updated = await tx.query.courseMaterials.findFirst({ where: (material) => eq(material.id, id) });
-            if (!updated) throw MaterialNotFound(id);
-            return this.toMaterial(updated);
+            const [moved] = await tx
+                .update(courseMaterials)
+                .set({ courseGroupId: targetGroupId, position: targetPosition, updatedAt })
+                .where(eq(courseMaterials.id, id))
+                .returning();
+            if (!moved) throw MaterialNotFound(id);
+            return this.toMaterial(moved);
         });
     }
 

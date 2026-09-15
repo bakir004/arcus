@@ -2,7 +2,15 @@ import { useEffect, useState, type SubmitEvent } from 'react';
 import { Loader2, Plus, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { CourseMaterial, MaterialGroup } from '../api/get-course-materials';
@@ -21,16 +29,18 @@ export function CreateCourseMaterialGroupDialog({
     const [open, setOpen] = useState(false);
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
+    const [labeled, setLabeled] = useState(true);
     const createGroup = useCreateCourseMaterialGroup();
 
     const submit = async (event: SubmitEvent<HTMLFormElement>) => {
         event.preventDefault();
         try {
-            await createGroup.mutateAsync({ courseId, name, description });
+            await createGroup.mutateAsync({ courseId, name, description, labeled });
             toast.success('Material group created.');
             onCreated?.(name);
             setName('');
             setDescription('');
+            setLabeled(true);
             setOpen(false);
         } catch {
             toast.error('Failed to create material group.');
@@ -54,7 +64,7 @@ export function CreateCourseMaterialGroupDialog({
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-2">
-                        <Label htmlFor="material-group-name">Name</Label>
+                        <Label htmlFor="material-group-name">Title</Label>
                         <Input
                             id="material-group-name"
                             value={name}
@@ -72,6 +82,23 @@ export function CreateCourseMaterialGroupDialog({
                             maxLength={2000}
                             className="min-h-24 w-full rounded-lg border border-border bg-card px-2.5 py-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                         />
+                    </div>
+                    <div className="flex items-start gap-3">
+                        <input
+                            id="material-group-labeled"
+                            type="checkbox"
+                            checked={labeled}
+                            aria-describedby="material-group-labeled-description"
+                            onChange={(event) => setLabeled(event.target.checked)}
+                            className="mt-1 size-4 rounded border-input accent-primary"
+                        />
+                        <div className="space-y-1">
+                            <Label htmlFor="material-group-labeled">Show title and description</Label>
+                            <p id="material-group-labeled-description" className="text-xs text-muted-foreground">
+                                Turn this off for an unlabeled section. The title remains visible to professors when
+                                managing and moving materials so they can distinguish it from other unlabeled sections.
+                            </p>
+                        </div>
                     </div>
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setOpen(false)}>
@@ -148,22 +175,42 @@ export function EditCourseMaterialDialog({
                         <>
                             <div className="space-y-2">
                                 <Label htmlFor={`edit-title-${material.id}`}>Title</Label>
-                                <Input id={`edit-title-${material.id}`} value={titleValue} onChange={(event) => setTitleValue(event.target.value)} required />
+                                <Input
+                                    id={`edit-title-${material.id}`}
+                                    value={titleValue}
+                                    onChange={(event) => setTitleValue(event.target.value)}
+                                    required
+                                />
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor={`edit-description-${material.id}`}>Description</Label>
-                                <textarea id={`edit-description-${material.id}`} value={description} onChange={(event) => setDescription(event.target.value)} className="min-h-20 w-full rounded-lg border border-border bg-card p-2 text-sm" />
+                                <textarea
+                                    id={`edit-description-${material.id}`}
+                                    value={description}
+                                    onChange={(event) => setDescription(event.target.value)}
+                                    className="min-h-20 w-full rounded-lg border border-border bg-card p-2 text-sm"
+                                />
                             </div>
                             {material.kind === 'FILE' && (
                                 <div className="space-y-2">
                                     <Label htmlFor={`edit-file-${material.id}`}>Replace file (optional)</Label>
-                                    <Input id={`edit-file-${material.id}`} type="file" onChange={(event) => setFile(event.target.files?.[0])} />
+                                    <Input
+                                        id={`edit-file-${material.id}`}
+                                        type="file"
+                                        onChange={(event) => setFile(event.target.files?.[0])}
+                                    />
                                 </div>
                             )}
                             {material.kind === 'LINK' && (
                                 <div className="space-y-2">
                                     <Label htmlFor={`edit-url-${material.id}`}>URL</Label>
-                                    <Input id={`edit-url-${material.id}`} type="url" value={externalUrl} onChange={(event) => setExternalUrl(event.target.value)} required />
+                                    <Input
+                                        id={`edit-url-${material.id}`}
+                                        type="url"
+                                        value={externalUrl}
+                                        onChange={(event) => setExternalUrl(event.target.value)}
+                                        required
+                                    />
                                 </div>
                             )}
                         </>
@@ -171,11 +218,19 @@ export function EditCourseMaterialDialog({
                     {material.kind === 'TEXT' && (
                         <div className="space-y-2">
                             <Label htmlFor={`edit-text-${material.id}`}>Text</Label>
-                            <textarea id={`edit-text-${material.id}`} value={textContent} onChange={(event) => setTextContent(event.target.value)} className="min-h-32 w-full rounded-lg border border-border bg-card p-2 text-sm" required />
+                            <textarea
+                                id={`edit-text-${material.id}`}
+                                value={textContent}
+                                onChange={(event) => setTextContent(event.target.value)}
+                                className="min-h-32 w-full rounded-lg border border-border bg-card p-2 text-sm"
+                                required
+                            />
                         </div>
                     )}
                     <DialogFooter>
-                        <Button type="submit" disabled={updateMaterial.isPending}>Save</Button>
+                        <Button type="submit" disabled={updateMaterial.isPending}>
+                            Save
+                        </Button>
                     </DialogFooter>
                 </form>
             </DialogContent>
@@ -362,4 +417,3 @@ export function CreateCourseMaterialDialog({
         </Dialog>
     );
 }
-

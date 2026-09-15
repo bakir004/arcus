@@ -127,6 +127,7 @@ function GroupCard({
 }) {
     const [materials, setMaterials] = useState(group.materials);
     const [collapsed, setCollapsed] = useState(false);
+    const isLabeled = group.labeled;
     const { mutateAsync: moveMaterial } = useMoveCourseMaterial();
     useEffect(() => setMaterials(group.materials), [group.materials]);
     const reorder = useCallback(
@@ -154,8 +155,8 @@ function GroupCard({
         >
             <Group
                 gap={4}
-                className="cursor-pointer px-5 py-5 transition-colors hover:bg-muted/50"
-                onClick={() => setCollapsed((value) => !value)}
+                className={isLabeled ? 'cursor-pointer px-5 py-5 transition-colors hover:bg-muted/50' : 'px-5 py-2'}
+                onClick={isLabeled ? () => setCollapsed((value) => !value) : undefined}
             >
                 <button
                     type="button"
@@ -166,23 +167,31 @@ function GroupCard({
                 >
                     <GripVertical className="size-4" />
                 </button>
-                <Box className="flex size-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
-                    <ClipboardList className="size-5" />
-                </Box>
-                <div className="min-w-0 flex-1">
-                    <Group gap={2}>
-                        <h2 className="truncate font-semibold">{group.name}</h2>
-                        <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
-                            {materials.length} {materials.length === 1 ? 'item' : 'items'}
-                        </span>
-                    </Group>
-                    {group.description && <p className="mt-1 text-sm text-muted-foreground">{group.description}</p>}
-                </div>
-                <ChevronDown
-                    className={`size-4 shrink-0 text-muted-foreground transition-transform ${collapsed ? '-rotate-90' : ''}`}
-                />
+                {isLabeled ? (
+                    <>
+                        <Box className="flex size-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
+                            <ClipboardList className="size-5" />
+                        </Box>
+                        <div className="min-w-0 flex-1">
+                            <Group gap={2}>
+                                <h2 className="truncate font-semibold">{group.name}</h2>
+                                <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                                    {materials.length} {materials.length === 1 ? 'item' : 'items'}
+                                </span>
+                            </Group>
+                            {group.description && (
+                                <p className="mt-1 text-sm text-muted-foreground">{group.description}</p>
+                            )}
+                        </div>
+                        <ChevronDown
+                            className={`size-4 shrink-0 text-muted-foreground transition-transform ${collapsed ? '-rotate-90' : ''}`}
+                        />
+                    </>
+                ) : (
+                    <h2 className="min-w-0 flex-1 truncate text-sm italic text-muted-foreground">{group.name}</h2>
+                )}
             </Group>
-            {!collapsed && (
+            {(!isLabeled || !collapsed) && (
                 <GroupMaterialList
                     courseId={courseId}
                     materials={materials}

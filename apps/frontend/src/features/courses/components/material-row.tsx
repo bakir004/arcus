@@ -1,7 +1,15 @@
 import { useState } from 'react';
 import { ArrowUpDown, Download, ExternalLink, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSub,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { getCourseMaterialUrlRequest, type CourseMaterial, type MaterialGroup } from '../api/get-course-materials';
 import { useDeleteCourseMaterial } from '../api/delete-course-material';
@@ -80,19 +88,38 @@ export function MaterialRow({
                     <div className="min-w-0 flex-1">{material.textContent}</div>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <button type="button" aria-label={`Actions for ${title(material)}`} className="-ml-2 flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
+                            <button
+                                type="button"
+                                aria-label={`Actions for ${title(material)}`}
+                                className="-ml-2 flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                            >
                                 <MoreVertical className="size-4" />
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-44">
-                            <DropdownMenuItem onSelect={() => setEditOpen(true)}><Pencil /> Edit</DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+                                <Pencil /> Edit
+                            </DropdownMenuItem>
                             <DropdownMenuSub>
                                 <DropdownMenuSubTrigger>
                                     <ArrowUpDown /> Move to
                                 </DropdownMenuSubTrigger>
                                 <DropdownMenuSubContent>
                                     {groups.map((group) => (
-                                        <DropdownMenuItem key={group.id} disabled={group.id === material.courseGroupId} onSelect={() => void moveMaterial.mutateAsync({ courseId, materialId: material.id, groupId: group.id, position: group.materials.length }).catch(() => toast.error('Failed to move material.'))}>
+                                        <DropdownMenuItem
+                                            key={group.id}
+                                            disabled={group.id === material.courseGroupId}
+                                            onSelect={() =>
+                                                void moveMaterial
+                                                    .mutateAsync({
+                                                        courseId,
+                                                        materialId: material.id,
+                                                        groupId: group.id,
+                                                        position: group.materials.length,
+                                                    })
+                                                    .catch(() => toast.error('Failed to move material.'))
+                                            }
+                                        >
                                             {group.name}
                                         </DropdownMenuItem>
                                     ))}
@@ -104,7 +131,12 @@ export function MaterialRow({
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
-                <EditCourseMaterialDialog courseId={courseId} material={material} open={editOpen} onOpenChange={setEditOpen} />
+                <EditCourseMaterialDialog
+                    courseId={courseId}
+                    material={material}
+                    open={editOpen}
+                    onOpenChange={setEditOpen}
+                />
                 <DeleteCourseMaterialDialog
                     name={title(material)}
                     open={deleteOpen}
@@ -139,11 +171,9 @@ export function MaterialRow({
                     >
                         {title(material)}
                     </button>
-                    <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                        {material.kind === 'FILE'
-                            ? (material.description ?? 'File')
-                            : (material.description ?? 'External link')}
-                    </p>
+                    {material.description && (
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground">{material.description}</p>
+                    )}
                 </div>
                 {material.kind === 'LINK' ? (
                     <a
@@ -247,4 +277,3 @@ export function MaterialRow({
         </>
     );
 }
-

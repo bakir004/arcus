@@ -46,7 +46,7 @@ import {
 } from './materials.dto';
 import { MaterialsService } from './materials.service';
 
-@ApiTags('Courses')
+@ApiTags('Course Materials')
 @ApiExtraModels(MaterialGroupResponseDto)
 @Controller({ path: 'courses/:courseId/materials', version: '1' })
 export class MaterialsController {

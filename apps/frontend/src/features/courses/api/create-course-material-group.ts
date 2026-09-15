@@ -5,12 +5,18 @@ export interface CreateCourseMaterialGroupRequest {
     courseId: string;
     name: string;
     description?: string;
+    labeled?: boolean;
 }
 
-export const createCourseMaterialGroupRequest = ({ courseId, name, description }: CreateCourseMaterialGroupRequest) =>
+export const createCourseMaterialGroupRequest = ({
+    courseId,
+    name,
+    description,
+    labeled,
+}: CreateCourseMaterialGroupRequest) =>
     apiClient(`/courses/${courseId}/materials/groups`, {
         method: 'POST',
-        body: { name, description },
+        body: { name, description, labeled },
     });
 
 export const useCreateCourseMaterialGroup = () => {

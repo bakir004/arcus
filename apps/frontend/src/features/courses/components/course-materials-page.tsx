@@ -164,16 +164,18 @@ export function CourseMaterialsPage() {
                         >
                             Top
                         </button>
-                        {displayedGroups.map(({ group }, index) => (
-                            <button
-                                type="button"
-                                key={group.id}
-                                onClick={() => scrollToGroup(groupAnchor(group, index))}
-                                className="block w-full rounded-md px-3 py-2 text-left text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-                            >
-                                {group.name}
-                            </button>
-                        ))}
+                        {displayedGroups.map(({ group }, index) =>
+                            group.labeled ? (
+                                <button
+                                    type="button"
+                                    key={group.id}
+                                    onClick={() => scrollToGroup(groupAnchor(group, index))}
+                                    className="block w-full rounded-md px-3 py-2 text-left text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+                                >
+                                    {group.name}
+                                </button>
+                            ) : null,
+                        )}
                     </nav>
                 </Box>
             </Box>

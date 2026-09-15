@@ -1,6 +1,6 @@
 import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { IsInt, IsNotEmpty, IsObject, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsInt, IsNotEmpty, IsObject, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
 import type { Material, MaterialGroup } from './materials.entity';
 import { getAllMaterialRepositories, getMaterialRepository } from './materials.repository.registry';
 
@@ -68,6 +68,11 @@ export class CreateMaterialGroupDto {
     @IsString()
     @MaxLength(2000)
     description?: string | null;
+
+    @ApiPropertyOptional({ default: true, description: 'Whether the title and description are displayed.' })
+    @IsOptional()
+    @IsBoolean()
+    labeled?: boolean;
 }
 
 export class EditMaterialGroupDto extends PartialType(CreateMaterialGroupDto) {}
@@ -133,6 +138,8 @@ export class MaterialGroupResponseDto {
     name: string;
     @ApiPropertyOptional({ nullable: true })
     description: string | null;
+    @ApiProperty()
+    labeled: boolean;
     @ApiProperty({ type: 'array', items: materialResponseApiSchema })
     materials: MaterialResponseDto[];
     @ApiProperty({ format: 'date-time' })

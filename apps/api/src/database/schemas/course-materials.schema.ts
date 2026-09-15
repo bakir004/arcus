@@ -1,7 +1,7 @@
 import { relations } from 'drizzle-orm';
 import { user } from './auth.schema';
 import { courses } from './courses.schema';
-import { index, integer, pgEnum, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
+import { boolean, index, integer, pgEnum, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 
 export const courseMaterialKind = pgEnum('course_material_kind', ['TEXT', 'FILE', 'LINK']);
 
@@ -15,6 +15,7 @@ export const courseGroups = pgTable(
         position: integer('position').notNull(),
         name: text('name').notNull(),
         description: text('description'),
+        labeled: boolean('labeled').default(true).notNull(),
         createdAt: timestamp('created_at').defaultNow().notNull(),
         updatedAt: timestamp('updated_at').defaultNow().notNull(),
     },

@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "db": "bash scripts/start-db.sh",
+    "minio": "bash scripts/start-minio.sh",
     "api": "bun --cwd apps/api dev",
     "frontend": "bun --cwd apps/frontend dev",
     "dev:infra": "docker compose --env-file apps/api/.env -f docker-compose.yml up postgres minio dragonfly",
