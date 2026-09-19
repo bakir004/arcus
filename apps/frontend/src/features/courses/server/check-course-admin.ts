@@ -17,6 +17,6 @@ export const checkCourseAdmin = createServerFn({ method: 'GET' })
 
         return {
             authenticated: courseMe !== null,
-            isAdmin: courseMe !== null && hasRole(courseMe.roles, 'admin'),
+            isAdmin: courseMe !== null && (hasRole(courseMe.roles, 'admin') || hasRole(courseMe.roles, 'professor')),
         };
     });

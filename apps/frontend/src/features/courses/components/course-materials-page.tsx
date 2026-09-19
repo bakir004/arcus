@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useParams } from '@tanstack/react-router';
-import { useQueryClient } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Box } from '@/components/common';
@@ -10,9 +9,11 @@ import { useGetCourseMaterials } from '../api/get-course-materials';
 import { useGetCourseByCode } from '../api/get-course';
 import { useGetCourseMe } from '../api/get-course-me';
 import { useMoveCourseMaterialGroup } from '../api/move-course-material-group';
+import { isProfessorRole } from '@/features/auth/lib/roles';
+import { useDebounce } from '@/hooks/use-debounce';
 import { SortableGroupCard } from './material-group';
 import { CreateCourseMaterialDialog, CreateCourseMaterialGroupDialog } from './course-material-dialogs';
-import { groupAnchor, scrollToGroup, title } from './material-utils';
+import { fuzzyMatch, groupAnchor, scrollToGroup, title } from './material-utils';
 
 export function CourseMaterialsPage() {
     const { code } = useParams({ from: '/courses/$code/materials' });
@@ -20,14 +21,14 @@ export function CourseMaterialsPage() {
     const { data: content, isLoading, isError } = useGetCourseMaterials(course?.id ?? '');
     const { data: courseMe } = useGetCourseMe(course?.id ?? '');
     const [search, setSearch] = useState('');
+    const debouncedSearch = useDebounce(search);
     const [scrollTarget, setScrollTarget] = useState<string | null | undefined>();
     const materialGroups = content ?? [];
-    const canCreateMaterial = courseMe?.permissions.includes('course:material:create') ?? false;
-    const moveGroup = useMoveCourseMaterialGroup();
-    const queryClient = useQueryClient();
+    const isProfessor = isProfessorRole(courseMe?.roles);
+    const { reorder: reorderGroup } = useMoveCourseMaterialGroup();
     const groupSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 1 } }));
     const groups = useMemo(() => {
-        const q = search.toLowerCase().trim();
+        const q = debouncedSearch.toLowerCase().trim();
         return (content ?? [])
             .map((group) => ({
                 group: {
@@ -35,29 +36,30 @@ export function CourseMaterialsPage() {
                     materials: group.materials.filter(
                         (material) =>
                             !q ||
-                            title(material).toLowerCase().includes(q) ||
-                            (material.kind !== 'TEXT' && (material.description ?? '').toLowerCase().includes(q)),
+                            fuzzyMatch(title(material), q) ||
+                            (material.kind === 'TEXT'
+                                ? fuzzyMatch(material.textContent, q)
+                                : fuzzyMatch(material.description ?? '', q)),
                     ),
                 },
             }))
             .filter(({ group }) => group.materials.length || (!q && group.materials.length === 0));
-    }, [content, search]);
+    }, [content, debouncedSearch]);
     const [orderedGroups, setOrderedGroups] = useState<typeof groups>([]);
     useEffect(() => {
-        if (!search.trim()) setOrderedGroups(groups);
-    }, [groups, search]);
-    const displayedGroups = search.trim() ? groups : orderedGroups.length ? orderedGroups : groups;
+        if (!debouncedSearch.trim()) setOrderedGroups(groups);
+    }, [groups, debouncedSearch]);
+    const displayedGroups = debouncedSearch.trim() ? groups : orderedGroups.length ? orderedGroups : groups;
+    const visibleGroups = isProfessor
+        ? displayedGroups
+        : displayedGroups.filter(({ group }) => group.materials.length > 0);
     const reorderGroups = (activeId: string, overId: string) => {
-        if (activeId === overId || search.trim()) return;
+        if (!isProfessor || activeId === overId || debouncedSearch.trim()) return;
         const oldIndex = displayedGroups.findIndex(({ group }) => group.id === activeId);
         const newIndex = displayedGroups.findIndex(({ group }) => group.id === overId);
         if (oldIndex < 0 || newIndex < 0) return;
         setOrderedGroups((current) => arrayMove(current, oldIndex, newIndex));
-        void moveGroup.mutateAsync({ courseId: course?.id ?? '', groupId: activeId, position: newIndex }).catch(() => {
-            void queryClient.refetchQueries({
-                queryKey: ['courses', course?.id ?? '', 'materials'],
-                type: 'active',
-            });
+        void reorderGroup({ courseId: course?.id ?? '', groupId: activeId, position: newIndex }).catch(() => {
             toast.error('Failed to save group order.');
         });
     };
@@ -93,7 +95,7 @@ export function CourseMaterialsPage() {
     return (
         <Box as="main" id="top" className="mx-auto flex w-full max-w-7xl gap-8 px-6 py-10">
             <Box className="min-w-0 flex-1">
-                {canCreateMaterial && (
+                {isProfessor && (
                     <div className="mb-4 flex flex-wrap justify-end gap-2">
                         <CreateCourseMaterialGroupDialog courseId={course.id} onCreated={setScrollTarget} />
                         <CreateCourseMaterialDialog
@@ -121,22 +123,23 @@ export function CourseMaterialsPage() {
                         <div className="rounded-lg border border-border bg-card p-8 text-center text-destructive">
                             Unable to load course materials.
                         </div>
-                    ) : displayedGroups.length ? (
+                    ) : visibleGroups.length ? (
                         <DndContext
                             sensors={groupSensors}
                             collisionDetection={closestCenter}
                             onDragEnd={handleGroupDragEnd}
                         >
                             <SortableContext
-                                items={displayedGroups.map(({ group }) => group.id)}
+                                items={visibleGroups.map(({ group }) => group.id)}
                                 strategy={verticalListSortingStrategy}
                             >
-                                {displayedGroups.map(({ group }, index) => (
+                                {visibleGroups.map(({ group }, index) => (
                                     <SortableGroupCard
                                         key={group.id}
                                         courseId={course.id}
                                         group={group}
                                         allGroups={materialGroups}
+                                        canManage={isProfessor}
                                         anchorId={groupAnchor(group, index)}
                                     />
                                 ))}
@@ -164,7 +167,7 @@ export function CourseMaterialsPage() {
                         >
                             Top
                         </button>
-                        {displayedGroups.map(({ group }, index) =>
+                        {visibleGroups.map(({ group }, index) =>
                             group.labeled ? (
                                 <button
                                     type="button"

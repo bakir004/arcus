@@ -38,17 +38,10 @@ export type EditCourseGroup = Partial<
 export type CourseMaterial = typeof courseMaterials.$inferSelect;
 export type CreateCourseMaterial = typeof courseMaterials.$inferInsert;
 
-export type MaterialBase = Omit<
+/** Fields shared by every material kind. Kind-specific content belongs to its own type. */
+export type MaterialBase = Pick<
     CourseMaterial,
-    | 'kind'
-    | 'textContent'
-    | 'title'
-    | 'description'
-    | 'externalUrl'
-    | 'fileKey'
-    | 'fileName'
-    | 'fileMimeType'
-    | 'fileSize'
+    'id' | 'uploadedById' | 'courseGroupId' | 'position' | 'createdAt' | 'updatedAt'
 >;
 
 export type { FileMaterial, LinkMaterial, TextMaterial };

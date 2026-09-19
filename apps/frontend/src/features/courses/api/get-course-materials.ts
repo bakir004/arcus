@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/api/api-client';
 
 export interface MaterialBase {
@@ -52,9 +52,11 @@ export const getCourseMaterialsRequest = (courseId: string): Promise<MaterialGro
 export const getCourseMaterialUrlRequest = (courseId: string, materialId: string): Promise<{ url: string }> =>
     apiClient<{ url: string }>(`/courses/${courseId}/materials/${materialId}/url`);
 
-export const useGetCourseMaterials = (courseId: string) =>
-    useQuery({
+export const courseMaterialsOptions = (courseId: string) =>
+    queryOptions({
         queryKey: ['courses', courseId, 'materials'],
         queryFn: () => getCourseMaterialsRequest(courseId),
         enabled: Boolean(courseId),
     });
+
+export const useGetCourseMaterials = (courseId: string) => useQuery(courseMaterialsOptions(courseId));

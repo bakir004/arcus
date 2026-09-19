@@ -23,10 +23,12 @@ function SortableMaterial({
     courseId,
     material,
     groups,
+    canManage,
 }: {
     courseId: string;
     material: CourseMaterial;
     groups: MaterialGroup[];
+    canManage: boolean;
 }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: material.id });
     return (
@@ -40,16 +42,19 @@ function SortableMaterial({
                 material={material}
                 groups={groups}
                 dragHandle={
-                    <button
-                        type="button"
-                        aria-label={`Reorder ${title(material)}`}
-                        {...attributes}
-                        {...listeners}
-                        className="flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
-                    >
-                        <GripVertical className="size-4" />
-                    </button>
+                    canManage ? (
+                        <button
+                            type="button"
+                            aria-label={`Reorder ${title(material)}`}
+                            {...attributes}
+                            {...listeners}
+                            className="flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
+                        >
+                            <GripVertical className="size-4" />
+                        </button>
+                    ) : null
                 }
+                canManage={canManage}
             />
         </div>
     );
@@ -60,11 +65,13 @@ export function SortableGroupCard({
     group,
     allGroups,
     anchorId,
+    canManage,
 }: {
     courseId: string;
     group: MaterialGroup;
     allGroups: MaterialGroup[];
     anchorId?: string;
+    canManage: boolean;
 }) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: group.id });
     return (
@@ -81,7 +88,8 @@ export function SortableGroupCard({
                 group={group}
                 allGroups={allGroups}
                 anchorId={anchorId}
-                groupDragHandleProps={{ ...attributes, ...listeners }}
+                canManage={canManage}
+                groupDragHandleProps={canManage ? { ...attributes, ...listeners } : undefined}
             />
         </div>
     );
@@ -100,17 +108,23 @@ const GroupMaterialList = memo(function GroupMaterialList({
     materials,
     allGroups,
     onDragEnd,
+    canManage,
+    showHeader,
 }: {
     courseId: string;
     materials: CourseMaterial[];
     allGroups: MaterialGroup[];
     onDragEnd: (event: DragEndEvent) => void;
+    canManage: boolean;
+    showHeader: boolean;
 }) {
     const sensors = useSensors(useSensor(PointerSensor));
     return (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={canManage ? onDragEnd : undefined}>
             <SortableContext items={materials.map((item) => item.id)} strategy={verticalListSortingStrategy}>
-                <div className="divide-y divide-border border-t border-border">
+                <div
+                    className={showHeader ? 'divide-y divide-border border-t border-border' : 'divide-y divide-border'}
+                >
                     {materials.length ? (
                         materials.map((material) => (
                             <SortableMaterial
@@ -118,6 +132,7 @@ const GroupMaterialList = memo(function GroupMaterialList({
                                 courseId={courseId}
                                 material={material}
                                 groups={allGroups}
+                                canManage={canManage}
                             />
                         ))
                     ) : (
@@ -135,12 +150,14 @@ function GroupCard({
     allGroups,
     anchorId,
     groupDragHandleProps,
+    canManage,
 }: {
     courseId: string;
     group: MaterialGroup;
     allGroups: MaterialGroup[];
     anchorId?: string;
     groupDragHandleProps?: HTMLAttributes<HTMLButtonElement>;
+    canManage: boolean;
 }) {
     const [materials, setMaterials] = useState(group.materials);
     const [collapsed, setCollapsed] = useState(false);
@@ -152,7 +169,7 @@ function GroupCard({
     useEffect(() => setMaterials(group.materials), [group.materials]);
     const reorder = useCallback(
         ({ active, over }: DragEndEvent) => {
-            if (!over || active.id === over.id) return;
+            if (!canManage || !over || active.id === over.id) return;
             const oldIndex = materials.findIndex((item) => item.id === active.id);
             const newIndex = materials.findIndex((item) => item.id === over.id);
             if (oldIndex < 0 || newIndex < 0) return;
@@ -164,7 +181,7 @@ function GroupCard({
                 position: newIndex,
             }).catch(() => toast.error('Failed to save material order.'));
         },
-        [courseId, group.id, materials, moveMaterial],
+        [canManage, courseId, group.id, materials, moveMaterial],
     );
     return (
         <section
@@ -173,104 +190,112 @@ function GroupCard({
             data-group-name={group.name}
             className="scroll-mt-24 overflow-hidden rounded-lg border border-border bg-card"
         >
-            <Group
-                gap={4}
-                className={isLabeled ? 'cursor-pointer px-5 py-5 transition-colors hover:bg-muted/50' : 'px-5 py-2'}
-                onClick={isLabeled ? () => setCollapsed((value) => !value) : undefined}
-            >
-                <button
-                    type="button"
-                    {...groupDragHandleProps}
-                    aria-label={`Drag ${group.name}`}
-                    className="flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
-                    onClick={(event) => event.stopPropagation()}
+            {(isLabeled || canManage) && (
+                <Group
+                    gap={4}
+                    className={isLabeled ? 'cursor-pointer px-5 py-5 transition-colors hover:bg-muted/50' : 'px-5 py-2'}
+                    onClick={isLabeled ? () => setCollapsed((value) => !value) : undefined}
                 >
-                    <GripVertical className="size-4" />
-                </button>
-                {isLabeled ? (
-                    <>
-                        <Box className="flex size-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
-                            <ClipboardList className="size-5" />
-                        </Box>
-                        <div className="min-w-0 flex-1">
-                            <Group gap={2}>
-                                <h2 className="truncate font-semibold">{group.name}</h2>
-                                <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
-                                    {materials.length} {materials.length === 1 ? 'item' : 'items'}
+                    {canManage && (
+                        <button
+                            type="button"
+                            {...groupDragHandleProps}
+                            aria-label={`Drag ${group.name}`}
+                            className="flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
+                            onClick={(event) => event.stopPropagation()}
+                        >
+                            <GripVertical className="size-4" />
+                        </button>
+                    )}
+                    {isLabeled ? (
+                        <>
+                            <Box className="flex size-12 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500">
+                                <ClipboardList className="size-5" />
+                            </Box>
+                            <div className="min-w-0 flex-1">
+                                <Group gap={2}>
+                                    <h2 className="truncate font-semibold">{group.name}</h2>
+                                    <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                                        {materials.length} {materials.length === 1 ? 'item' : 'items'}
+                                    </span>
+                                </Group>
+                                {group.description && (
+                                    <p className="mt-1 text-sm text-muted-foreground">{group.description}</p>
+                                )}
+                            </div>
+                            {group.weekStartDate && (
+                                <span className="flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground">
+                                    <CalendarDays className="size-4" />
+                                    {formatWeekRange(group.weekStartDate)}
                                 </span>
-                            </Group>
-                            {group.description && (
-                                <p className="mt-1 text-sm text-muted-foreground">{group.description}</p>
                             )}
-                        </div>
-                        {group.weekStartDate && (
-                            <span className="flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground">
-                                <CalendarDays className="size-4" />
-                                {formatWeekRange(group.weekStartDate)}
-                            </span>
-                        )}
-                        <ChevronDown
-                            className={`size-4 shrink-0 text-muted-foreground transition-transform ${collapsed ? '-rotate-90' : ''}`}
-                        />
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <button
-                                    type="button"
-                                    aria-label={`Actions for ${group.name}`}
-                                    className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                            <ChevronDown
+                                className={`size-4 shrink-0 text-muted-foreground transition-transform ${collapsed ? '-rotate-90' : ''}`}
+                            />
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button
+                                        type="button"
+                                        hidden={!canManage}
+                                        aria-label={`Actions for ${group.name}`}
+                                        className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                                    >
+                                        <MoreVertical className="size-4" />
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                    align="end"
+                                    onPointerDown={(event) => event.stopPropagation()}
+                                    onClick={(event) => event.stopPropagation()}
                                 >
-                                    <MoreVertical className="size-4" />
-                                </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                                align="end"
-                                onPointerDown={(event) => event.stopPropagation()}
-                                onClick={(event) => event.stopPropagation()}
-                            >
-                                <DropdownMenuItem onSelect={() => setEditOpen(true)}>
-                                    <Pencil /> Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
-                                    <Trash2 /> Delete
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </>
-                ) : (
-                    <>
-                        <h2 className="min-w-0 flex-1 truncate text-sm italic text-muted-foreground">{group.name}</h2>
-                        {group.weekStartDate && (
-                            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                                <CalendarDays className="size-4" />
-                                {formatWeekRange(group.weekStartDate)}
-                            </span>
-                        )}
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <button
-                                    type="button"
-                                    aria-label={`Actions for ${group.name}`}
-                                    className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                                    <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+                                        <Pencil /> Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
+                                        <Trash2 /> Delete
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </>
+                    ) : (
+                        <>
+                            <h2 className="min-w-0 flex-1 truncate text-sm italic text-muted-foreground">
+                                {group.name}
+                            </h2>
+                            {group.weekStartDate && (
+                                <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                    <CalendarDays className="size-4" />
+                                    {formatWeekRange(group.weekStartDate)}
+                                </span>
+                            )}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button
+                                        type="button"
+                                        hidden={!canManage}
+                                        aria-label={`Actions for ${group.name}`}
+                                        className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                                    >
+                                        <MoreVertical className="size-4" />
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                    align="end"
+                                    onPointerDown={(event) => event.stopPropagation()}
+                                    onClick={(event) => event.stopPropagation()}
                                 >
-                                    <MoreVertical className="size-4" />
-                                </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                                align="end"
-                                onPointerDown={(event) => event.stopPropagation()}
-                                onClick={(event) => event.stopPropagation()}
-                            >
-                                <DropdownMenuItem onSelect={() => setEditOpen(true)}>
-                                    <Pencil /> Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
-                                    <Trash2 /> Delete
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </>
-                )}
-            </Group>
+                                    <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+                                        <Pencil /> Edit
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
+                                        <Trash2 /> Delete
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </>
+                    )}
+                </Group>
+            )}
             <EditCourseMaterialGroupDialog
                 courseId={courseId}
                 group={group}
@@ -295,6 +320,8 @@ function GroupCard({
                     materials={materials}
                     allGroups={allGroups}
                     onDragEnd={reorder}
+                    canManage={canManage}
+                    showHeader={isLabeled || canManage}
                 />
             )}
         </section>

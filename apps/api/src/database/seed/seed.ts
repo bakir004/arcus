@@ -14,6 +14,8 @@ import { faculties } from '@/database/schemas/faculties.schema';
 import {
     courseAdminPermissions,
     courseAdminRoleName,
+    courseProfessorPermissions,
+    courseProfessorRoleName,
     courseRestrictedAdminPermissions,
     courseRestrictedAdminRoleName,
     courseStudentPermissions,
@@ -81,7 +83,7 @@ async function seedFacultyAndCourses(createdById: string, users: Array<{ id: str
         }
 
         for (const seed of courseSeeds) {
-            const { adminRoleId, restrictedAdminRoleId, studentRoleId, ...course } = seed;
+            const { adminRoleId, restrictedAdminRoleId, professorRoleId, studentRoleId, ...course } = seed;
 
             await transaction
                 .insert(courses)
@@ -107,6 +109,11 @@ async function seedFacultyAndCourses(createdById: string, users: Array<{ id: str
                     id: restrictedAdminRoleId,
                     name: courseRestrictedAdminRoleName,
                     permissions: courseRestrictedAdminPermissions,
+                },
+                {
+                    id: professorRoleId,
+                    name: courseProfessorRoleName,
+                    permissions: courseProfessorPermissions,
                 },
                 {
                     id: studentRoleId,
@@ -161,7 +168,7 @@ async function seedFacultyAndCourses(createdById: string, users: Array<{ id: str
 
                 if (!member) throw new Error('Unable to create course member');
 
-                const assignedRoleId = seededUser.email === studentEmail ? studentRoleId : adminRoleId;
+                const assignedRoleId = seededUser.email === studentEmail ? studentRoleId : professorRoleId;
 
                 await transaction
                     .delete(courseMemberRoles)
@@ -171,6 +178,7 @@ async function seedFacultyAndCourses(createdById: string, users: Array<{ id: str
                             inArray(courseMemberRoles.courseRoleId, [
                                 adminRoleId,
                                 restrictedAdminRoleId,
+                                professorRoleId,
                                 studentRoleId,
                             ]),
                         ),
@@ -185,7 +193,9 @@ async function seedFacultyAndCourses(createdById: string, users: Array<{ id: str
     });
 
     console.log(`Seeded ${facultySeeds.length} faculty and ${courseSeeds.length} courses`);
-    console.log(`Enrolled ${users.length} users in every course (Imran Vlajcic as Student)`);
+    console.log(
+        `Enrolled ${users.length} users in every course (Bakir Cinjarevic as Professor, Imran Vlajcic as Student)`,
+    );
 }
 
 async function seedExams(createdById: string) {

@@ -8,6 +8,7 @@ export type CourseSeed = Omit<typeof courses.$inferInsert, 'id' | 'createdById'>
     id: string;
     adminRoleId: string;
     restrictedAdminRoleId: string;
+    professorRoleId: string;
     studentRoleId: string;
 };
 
@@ -19,6 +20,7 @@ export const courseSeeds: CourseSeed[] = [
         facultyId,
         adminRoleId: '00000000-0000-4000-8000-000000000201',
         restrictedAdminRoleId: '00000000-0000-4000-8000-000000000301',
+        professorRoleId: '00000000-0000-4000-8000-000000000501',
         studentRoleId: '00000000-0000-4000-8000-000000000401',
     },
     {
@@ -28,6 +30,7 @@ export const courseSeeds: CourseSeed[] = [
         facultyId,
         adminRoleId: '00000000-0000-4000-8000-000000000202',
         restrictedAdminRoleId: '00000000-0000-4000-8000-000000000302',
+        professorRoleId: '00000000-0000-4000-8000-000000000502',
         studentRoleId: '00000000-0000-4000-8000-000000000402',
     },
     {
@@ -37,6 +40,7 @@ export const courseSeeds: CourseSeed[] = [
         facultyId,
         adminRoleId: '00000000-0000-4000-8000-000000000203',
         restrictedAdminRoleId: '00000000-0000-4000-8000-000000000303',
+        professorRoleId: '00000000-0000-4000-8000-000000000503',
         studentRoleId: '00000000-0000-4000-8000-000000000403',
     },
     {
@@ -46,6 +50,7 @@ export const courseSeeds: CourseSeed[] = [
         facultyId,
         adminRoleId: '00000000-0000-4000-8000-000000000204',
         restrictedAdminRoleId: '00000000-0000-4000-8000-000000000304',
+        professorRoleId: '00000000-0000-4000-8000-000000000504',
         studentRoleId: '00000000-0000-4000-8000-000000000404',
     },
 ];
@@ -56,6 +61,8 @@ export const courseAdminPermissions: Permission[] = Object.values(Permissions);
 export const courseRestrictedAdminPermissions = courseAdminPermissions.filter(
     (permission) => permission !== Permissions.ExamCreate && permission !== Permissions.ExamUpdate,
 );
+export const courseProfessorRoleName = 'Professor';
+export const courseProfessorPermissions: Permission[] = Object.values(Permissions);
 export const courseStudentRoleName = 'Student';
 export const courseStudentPermissions: Permission[] = [
     Permissions.CourseRead,

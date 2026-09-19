@@ -64,6 +64,29 @@ const CODE_ICONS_BY_EXTENSION: Record<string, MaterialAppearance> = {
 export function title(material: CourseMaterial) {
     return material.kind === 'TEXT' ? 'Text note' : material.title;
 }
+
+/** Returns true when every query character appears in order within the value. */
+export function fuzzyMatch(value: string, query: string) {
+    const normalizedValue = value
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+    const normalizedQuery = query
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+
+    if (!normalizedQuery) return true;
+
+    let queryIndex = 0;
+    for (const character of normalizedValue) {
+        if (character === normalizedQuery[queryIndex]) queryIndex += 1;
+        if (queryIndex === normalizedQuery.length) return true;
+    }
+
+    return false;
+}
+
 function slugify(value: string) {
     return (
         value

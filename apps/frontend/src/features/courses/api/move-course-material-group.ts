@@ -15,7 +15,7 @@ export const moveCourseMaterialGroupRequest = ({ courseId, groupId, position }: 
 
 export const useMoveCourseMaterialGroup = () => {
     const queryClient = useQueryClient();
-    return useMutation({
+    const mutation = useMutation({
         mutationFn: moveCourseMaterialGroupRequest,
         onSuccess: async (_group, variables) => {
             await queryClient.refetchQueries({
@@ -23,5 +23,16 @@ export const useMoveCourseMaterialGroup = () => {
                 type: 'active',
             });
         },
+        onError: async (_error, variables) => {
+            await queryClient.refetchQueries({
+                queryKey: ['courses', variables.courseId, 'materials'],
+                type: 'active',
+            });
+        },
     });
+
+    return {
+        ...mutation,
+        reorder: mutation.mutateAsync,
+    };
 };

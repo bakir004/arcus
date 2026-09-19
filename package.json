@@ -12,6 +12,7 @@
     "minio": "bash scripts/start-minio.sh",
     "api": "bun --cwd apps/api dev",
     "frontend": "bun --cwd apps/frontend dev",
+    "preview": "bun --cwd apps/frontend preview",
     "dev:infra": "docker compose --env-file apps/api/.env -f docker-compose.yml up postgres minio dragonfly",
     "dev:api": "bun --cwd apps/api dev",
     "dev:api:app": "bun --cwd apps/api dev:app",

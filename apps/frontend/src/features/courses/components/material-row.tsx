@@ -45,11 +45,13 @@ export function MaterialRow({
     material,
     groups,
     dragHandle,
+    canManage,
 }: {
     courseId: string;
     material: CourseMaterial;
     groups: MaterialGroup[];
     dragHandle: React.ReactNode;
+    canManage: boolean;
 }) {
     const { Icon, color: iconColor } = materialAppearance(material);
     const { isDark } = useTheme();
@@ -118,6 +120,7 @@ export function MaterialRow({
                         <DropdownMenuTrigger asChild>
                             <button
                                 type="button"
+                                hidden={!canManage}
                                 aria-label={`Actions for ${title(material)}`}
                                 className="-ml-2 flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
                             >
@@ -236,6 +239,7 @@ export function MaterialRow({
                     <DropdownMenuTrigger asChild>
                         <button
                             type="button"
+                            hidden={!canManage}
                             aria-label={`Actions for ${title(material)}`}
                             className="-ml-2 flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
                         >

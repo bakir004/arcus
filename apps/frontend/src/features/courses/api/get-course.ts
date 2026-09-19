@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/api/api-client';
 import type { Course } from '@/features/courses/types';
 
@@ -14,9 +14,11 @@ export const useGetCourse = (courseId: string) =>
         enabled: Boolean(courseId),
     });
 
-export const useGetCourseByCode = (code: string) =>
-    useQuery<Course>({
+export const courseByCodeOptions = (code: string) =>
+    queryOptions<Course>({
         queryKey: ['courses', 'code', code],
         queryFn: () => getCourseByCodeRequest(code),
         enabled: Boolean(code),
     });
+
+export const useGetCourseByCode = (code: string) => useQuery(courseByCodeOptions(code));
