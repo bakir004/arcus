@@ -310,7 +310,10 @@ function GroupCard({
                 onConfirm={() => {
                     void deleteGroup
                         .mutateAsync({ courseId, groupId: group.id })
-                        .then(() => setDeleteOpen(false))
+                        .then(() => {
+                            setDeleteOpen(false);
+                            toast.success('Material group deleted.');
+                        })
                         .catch(() => toast.error('Failed to delete material group.'));
                 }}
             />

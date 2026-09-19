@@ -28,8 +28,17 @@ export class RolesService {
         );
     }
 
-    updatePermissions(courseId: string, roleId: string, dto: UpdateCourseRoleDto) {
-        return this.rolesRepository.updatePermissions(courseId, roleId, this.normalizePermissions(dto.permissions));
+    updateRole(courseId: string, roleId: string, dto: UpdateCourseRoleDto) {
+        return this.rolesRepository.updateRole(
+            courseId,
+            roleId,
+            dto.name?.trim(),
+            dto.permissions === undefined ? undefined : this.normalizePermissions(dto.permissions),
+        );
+    }
+
+    deleteRole(courseId: string, roleId: string) {
+        return this.rolesRepository.deleteRole(courseId, roleId);
     }
 
     assignRole(courseId: string, memberId: string, roleId: string) {

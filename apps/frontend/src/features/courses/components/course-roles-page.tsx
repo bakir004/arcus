@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useDebounce } from '@/hooks/use-debounce';
 import { useGetCourseByCode } from '../api/get-course';
 import {
@@ -16,6 +17,8 @@ import {
     useCoursePermissions,
     useCourseRoles,
     useCreateCourseRole,
+    useDeleteCourseRole,
+    useRenameCourseRole,
     useUpdateCourseRole,
 } from '../api/get-course-roles';
 
@@ -37,12 +40,17 @@ export function CourseRolesPage({ courseCode }: { courseCode: string }) {
     const [selectedRoleId, setSelectedRoleId] = useState('');
     const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
     const [newRoleName, setNewRoleName] = useState('');
-    const [newRoleOpen, setNewRoleOpen] = useState(false);
     const [manageRolesOpen, setManageRolesOpen] = useState(false);
+    const [roleManagementOpen, setRoleManagementOpen] = useState(false);
+    const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
+    const [editingRoleName, setEditingRoleName] = useState('');
     const [memberSearch, setMemberSearch] = useState('');
     const selectedRole = roles.find((role) => role.id === selectedRoleId);
+    const isProtectedRole = ['professor', 'student'].includes(selectedRole?.name.toLowerCase() ?? '');
     const updateRole = useUpdateCourseRole(courseId);
     const createRole = useCreateCourseRole(courseId);
+    const renameRole = useRenameCourseRole(courseId);
+    const deleteRole = useDeleteCourseRole(courseId);
     const assignRole = useAssignCourseMemberRole(courseId);
 
     useEffect(() => {
@@ -80,12 +88,8 @@ export function CourseRolesPage({ courseCode }: { courseCode: string }) {
         }, {});
     }, [permissions]);
 
-    const togglePermission = async (permission: string) => {
-        if (!selectedRole || updateRole.isPending) return;
-        const previousPermissions = selectedPermissions;
-        const nextPermissions = previousPermissions.includes(permission)
-            ? previousPermissions.filter((item) => item !== permission)
-            : [...previousPermissions, permission];
+    const updatePermissions = async (nextPermissions: string[], previousPermissions: string[]) => {
+        if (!selectedRole || isProtectedRole || updateRole.isPending) return;
         setSelectedPermissions(nextPermissions);
 
         const request = updateRole.mutateAsync({ roleId: selectedRole.id, permissions: nextPermissions });
@@ -102,6 +106,23 @@ export function CourseRolesPage({ courseCode }: { courseCode: string }) {
         }
     };
 
+    const togglePermission = (permission: string) => {
+        const previousPermissions = selectedPermissions;
+        const nextPermissions = previousPermissions.includes(permission)
+            ? previousPermissions.filter((item) => item !== permission)
+            : [...previousPermissions, permission];
+        void updatePermissions(nextPermissions, previousPermissions);
+    };
+
+    const togglePermissionGroup = (groupPermissions: string[]) => {
+        const previousPermissions = selectedPermissions;
+        const allSelected = groupPermissions.every((permission) => previousPermissions.includes(permission));
+        const nextPermissions = allSelected
+            ? previousPermissions.filter((permission) => !groupPermissions.includes(permission))
+            : [...new Set([...previousPermissions, ...groupPermissions])];
+        void updatePermissions(nextPermissions, previousPermissions);
+    };
+
     const addRole = async () => {
         const name = newRoleName.trim();
         if (!name) return;
@@ -109,10 +130,36 @@ export function CourseRolesPage({ courseCode }: { courseCode: string }) {
             const role = await createRole.mutateAsync({ name, permissions: [] });
             setNewRoleName('');
             setSelectedRoleId(role.id);
-            setNewRoleOpen(false);
+            setRoleManagementOpen(false);
             toast.success('Role created.');
         } catch {
             toast.error('Could not create role.');
+        }
+    };
+
+    const startRename = (roleId: string, name: string) => {
+        setEditingRoleId(roleId);
+        setEditingRoleName(name);
+    };
+
+    const saveRoleName = async () => {
+        if (!editingRoleId || !editingRoleName.trim()) return;
+        try {
+            await renameRole.mutateAsync({ roleId: editingRoleId, name: editingRoleName.trim() });
+            setEditingRoleId(null);
+            toast.success('Role renamed.');
+        } catch {
+            toast.error('Could not rename role.');
+        }
+    };
+
+    const removeRole = async (roleId: string) => {
+        try {
+            await deleteRole.mutateAsync(roleId);
+            if (selectedRoleId === roleId) setSelectedRoleId(roles.find((role) => role.id !== roleId)?.id ?? '');
+            toast.success('Role deleted.');
+        } catch {
+            toast.error('Could not delete role. Make sure no users are assigned to it.');
         }
     };
 
@@ -171,60 +218,136 @@ export function CourseRolesPage({ courseCode }: { courseCode: string }) {
                                 {roles.map((role) => (
                                     <SelectItem key={role.id} value={role.id}>
                                         {role.name}
+                                        {['student', 'professor'].includes(role.name.toLowerCase()) ? (
+                                            <span className="ml-1 italic text-muted-foreground">(readonly)</span>
+                                        ) : null}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
                         </Select>
                     </div>
-                    <Popover open={newRoleOpen} onOpenChange={setNewRoleOpen}>
+                    <Popover open={roleManagementOpen} onOpenChange={setRoleManagementOpen}>
                         <PopoverTrigger asChild>
                             <Button type="button" variant="outline">
                                 <Plus />
-                                Add role
+                                Manage roles
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent align="end" className="w-80">
-                            <form
-                                className="space-y-3"
-                                onSubmit={(event) => {
-                                    event.preventDefault();
-                                    void addRole();
-                                }}
-                            >
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="new-role-name">Role name</Label>
+                        <PopoverContent align="end" className="w-[calc(100vw-2rem)] max-w-96">
+                            <div className="space-y-3">
+                                <div>
+                                    <p className="text-sm font-medium">Available roles</p>
+                                    <p className="text-xs text-muted-foreground">Rename or delete course roles.</p>
+                                </div>
+                                <div className="max-h-72 space-y-1 overflow-y-auto scrollbar-thin">
+                                    {roles.map((role) => {
+                                        const hasAssignedUsers = members.some((member) =>
+                                            member.roles.some((memberRole) => memberRole.id === role.id),
+                                        );
+                                        const deleteButton = (
+                                            <Button
+                                                type="button"
+                                                size="xs"
+                                                variant="ghost"
+                                                className="text-destructive"
+                                                disabled={hasAssignedUsers || deleteRole.isPending}
+                                                onClick={() => void removeRole(role.id)}
+                                            >
+                                                Delete
+                                            </Button>
+                                        );
+                                        return (
+                                            <div key={role.id} className="rounded-md border px-2 py-1">
+                                                <Group className="items-center justify-between gap-1">
+                                                    <span className="min-w-0 truncate text-xs">{role.name}</span>
+                                                    <Group className="shrink-0 gap-1">
+                                                        <Button
+                                                            type="button"
+                                                            size="xs"
+                                                            variant="ghost"
+                                                            onClick={() => startRename(role.id, role.name)}
+                                                        >
+                                                            Rename
+                                                        </Button>
+                                                        {hasAssignedUsers ? (
+                                                            <Tooltip>
+                                                                <TooltipTrigger asChild>
+                                                                    <span tabIndex={0}>{deleteButton}</span>
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    There are users with this role. Reassign their roles
+                                                                    first before deleting.
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        ) : (
+                                                            deleteButton
+                                                        )}
+                                                    </Group>
+                                                </Group>
+                                                {editingRoleId === role.id ? (
+                                                    <form
+                                                        className="mt-1 flex gap-1"
+                                                        onSubmit={(event) => {
+                                                            event.preventDefault();
+                                                            void saveRoleName();
+                                                        }}
+                                                    >
+                                                        <Input
+                                                            value={editingRoleName}
+                                                            onChange={(event) => setEditingRoleName(event.target.value)}
+                                                            className="text-sm"
+                                                            autoFocus
+                                                        />
+                                                        <Button type="submit" size="sm" disabled={renameRole.isPending}>
+                                                            Save
+                                                        </Button>
+                                                    </form>
+                                                ) : null}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                <form
+                                    className="space-y-3 border-t pt-3"
+                                    onSubmit={(event) => {
+                                        event.preventDefault();
+                                        void addRole();
+                                    }}
+                                >
+                                    <Label htmlFor="new-role-name">Add role</Label>
                                     <Input
                                         id="new-role-name"
                                         value={newRoleName}
                                         onChange={(event) => setNewRoleName(event.target.value)}
                                         placeholder="e.g. Teaching assistant"
-                                        autoFocus
+                                        className="text-sm"
                                     />
-                                </div>
-                                <Button
-                                    type="submit"
-                                    className="w-full"
-                                    disabled={createRole.isPending || !newRoleName.trim()}
-                                >
-                                    Create role
-                                </Button>
-                            </form>
+                                    <Button
+                                        type="submit"
+                                        className="w-full"
+                                        disabled={createRole.isPending || !newRoleName.trim()}
+                                    >
+                                        Create role
+                                    </Button>
+                                </form>
+                            </div>
                         </PopoverContent>
                     </Popover>
                     <Popover open={manageRolesOpen} onOpenChange={setManageRolesOpen}>
                         <PopoverTrigger asChild>
                             <Button type="button" variant="secondary">
                                 <Search />
-                                Manage roles
+                                Manage users
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent align="end" className="w-[min(26rem,calc(100vw-2rem))] p-0">
+                        <PopoverContent align="end" className="w-[calc(100vw-2rem)] max-w-[26rem] p-0">
                             <div className="border-b p-3">
                                 <Input
                                     value={memberSearch}
                                     onChange={(event) => setMemberSearch(event.target.value)}
                                     placeholder="Search enrolled students…"
                                     aria-label="Search enrolled students"
+                                    className="text-sm"
                                     autoFocus
                                 />
                             </div>
@@ -289,27 +412,48 @@ export function CourseRolesPage({ courseCode }: { courseCode: string }) {
                     <Group className="mb-4 items-center justify-between">
                         <div>
                             <h2 className="font-medium">Permissions{selectedRole ? ` · ${selectedRole.name}` : ''}</h2>
-                            <p className="text-sm text-muted-foreground">Choose what this role can do in the course.</p>
+                            <p className="text-sm text-muted-foreground">
+                                {isProtectedRole
+                                    ? 'This built-in role has read-only permissions.'
+                                    : 'Choose what this role can do in the course.'}
+                            </p>
                         </div>
                     </Group>
                     <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                        {Object.entries(permissionGroups).map(([group, groupPermissions]) => (
-                            <div key={group} className="space-y-2">
-                                <h3 className="text-sm font-medium capitalize">{group}</h3>
-                                {groupPermissions.map((permission) => (
-                                    <label key={permission} className="flex cursor-pointer items-center gap-2 text-sm">
+                        {Object.entries(permissionGroups).map(([group, groupPermissions]) => {
+                            const allGroupSelected = groupPermissions.every((permission) =>
+                                selectedPermissions.includes(permission),
+                            );
+                            return (
+                                <div key={group} className="space-y-2">
+                                    <label className="flex cursor-pointer items-center gap-2 text-sm font-medium capitalize">
                                         <input
                                             type="checkbox"
-                                            checked={selectedPermissions.includes(permission)}
-                                            onChange={() => void togglePermission(permission)}
-                                            disabled={!selectedRole || updateRole.isPending}
+                                            checked={allGroupSelected}
+                                            onChange={() => togglePermissionGroup(groupPermissions)}
+                                            disabled={!selectedRole || isProtectedRole || updateRole.isPending}
                                             className="size-4 accent-primary"
                                         />
-                                        <span>{permission}</span>
+                                        <span>{group}</span>
                                     </label>
-                                ))}
-                            </div>
-                        ))}
+                                    {groupPermissions.map((permission) => (
+                                        <label
+                                            key={permission}
+                                            className="flex cursor-pointer items-center gap-2 pl-5 text-sm"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={selectedPermissions.includes(permission)}
+                                                onChange={() => void togglePermission(permission)}
+                                                disabled={!selectedRole || isProtectedRole || updateRole.isPending}
+                                                className="size-4 accent-primary"
+                                            />
+                                            <span>{permission}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            );
+                        })}
                     </div>
                 </div>
             </section>

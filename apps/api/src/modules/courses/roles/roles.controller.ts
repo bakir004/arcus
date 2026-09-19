@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import type { auth } from '@/auth';
 import { Permissions } from '@/authz/permissions';
@@ -53,12 +53,18 @@ export class RolesController {
 
     @Patch(':roleId')
     @ApiOperation({ summary: 'Replace a role permissions' })
-    updatePermissions(
+    updateRole(
         @Param('courseId', ParseUUIDPipe) courseId: string,
         @Param('roleId', ParseUUIDPipe) roleId: string,
         @Body() dto: UpdateCourseRoleDto,
     ) {
-        return this.rolesService.updatePermissions(courseId, roleId, dto);
+        return this.rolesService.updateRole(courseId, roleId, dto);
+    }
+
+    @Delete(':roleId')
+    @ApiOperation({ summary: 'Delete a course role' })
+    deleteRole(@Param('courseId', ParseUUIDPipe) courseId: string, @Param('roleId', ParseUUIDPipe) roleId: string) {
+        return this.rolesService.deleteRole(courseId, roleId).then(() => ({ success: true }));
     }
 
     @Patch('members/:memberId/role')

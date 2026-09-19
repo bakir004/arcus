@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsNotEmpty, IsString, IsUUID, MaxLength } from 'class-validator';
+import { IsArray, IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 
 export class CreateCourseRoleDto {
     @ApiProperty({ example: 'Teaching Assistant' })
@@ -15,10 +15,18 @@ export class CreateCourseRoleDto {
 }
 
 export class UpdateCourseRoleDto {
-    @ApiProperty({ type: [String] })
+    @ApiProperty({ required: false, example: 'Teaching Assistant' })
+    @IsOptional()
+    @IsString()
+    @IsNotEmpty()
+    @MaxLength(128)
+    name?: string;
+
+    @ApiProperty({ type: [String], required: false })
+    @IsOptional()
     @IsArray()
     @IsString({ each: true })
-    permissions: string[];
+    permissions?: string[];
 }
 
 export class AssignCourseMemberRoleDto {

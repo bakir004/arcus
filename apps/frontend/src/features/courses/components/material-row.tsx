@@ -214,7 +214,10 @@ export function MaterialRow({
                     onConfirm={() =>
                         void deleteMaterial
                             .mutateAsync({ courseId, materialId: material.id })
-                            .then(() => setDeleteOpen(false))
+                            .then(() => {
+                                setDeleteOpen(false);
+                                toast.success('Material deleted.');
+                            })
                             .catch(() => toast.error('Failed to delete material.'))
                     }
                 />
@@ -369,7 +372,10 @@ export function MaterialRow({
                 onConfirm={() =>
                     void deleteMaterial
                         .mutateAsync({ courseId, materialId: material.id })
-                        .then(() => setDeleteOpen(false))
+                        .then(() => {
+                            setDeleteOpen(false);
+                            toast.success('Material deleted.');
+                        })
                         .catch(() => toast.error('Failed to delete material.'))
                 }
             />

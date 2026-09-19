@@ -73,6 +73,33 @@ export function useUpdateCourseRole(courseId: string) {
     });
 }
 
+export function useRenameCourseRole(courseId: string) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (input: { roleId: string; name: string }) =>
+            apiClient<CourseRole>(`/courses/${courseId}/roles/${input.roleId}`, {
+                method: 'PATCH',
+                body: { name: input.name },
+            }),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({ queryKey: rolesKey(courseId) });
+            void queryClient.invalidateQueries({ queryKey: membersKey(courseId) });
+        },
+    });
+}
+
+export function useDeleteCourseRole(courseId: string) {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (roleId: string) =>
+            apiClient<{ success: boolean }>(`/courses/${courseId}/roles/${roleId}`, { method: 'DELETE' }),
+        onSuccess: () => {
+            void queryClient.invalidateQueries({ queryKey: rolesKey(courseId) });
+            void queryClient.invalidateQueries({ queryKey: membersKey(courseId) });
+        },
+    });
+}
+
 export function useAssignCourseMemberRole(courseId: string) {
     const queryClient = useQueryClient();
     return useMutation({

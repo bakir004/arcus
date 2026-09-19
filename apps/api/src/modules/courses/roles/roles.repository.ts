@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { and, asc, eq } from 'drizzle-orm';
 import type { Database } from '@/database/client';
 import { DATABASE } from '@/database/database.module';
@@ -40,7 +40,7 @@ export class RolesRepository {
         });
     }
 
-    async updatePermissions(courseId: string, roleId: string, permissions: string[]) {
+    async updateRole(courseId: string, roleId: string, name?: string, permissions?: string[]) {
         return this.db.transaction(async (tx) => {
             const [role] = await tx
                 .select({ id: courseRoles.id, name: courseRoles.name })
@@ -49,14 +49,48 @@ export class RolesRepository {
                 .limit(1);
             if (!role) throw new NotFoundException('Role not found');
 
-            await tx.delete(courseRolePermissions).where(eq(courseRolePermissions.courseRoleId, roleId));
-            if (permissions.length > 0) {
-                await tx
-                    .insert(courseRolePermissions)
-                    .values(permissions.map((permissionKey) => ({ courseRoleId: roleId, permissionKey })));
+            const [updatedRole] = name
+                ? await tx
+                      .update(courseRoles)
+                      .set({ name, updatedAt: new Date() })
+                      .where(eq(courseRoles.id, roleId))
+                      .returning({ id: courseRoles.id, name: courseRoles.name })
+                : [role];
+
+            if (permissions !== undefined) {
+                await tx.delete(courseRolePermissions).where(eq(courseRolePermissions.courseRoleId, roleId));
+                if (permissions.length > 0) {
+                    await tx
+                        .insert(courseRolePermissions)
+                        .values(permissions.map((permissionKey) => ({ courseRoleId: roleId, permissionKey })));
+                }
             }
-            return { ...role, permissions };
+
+            const currentPermissions = await tx
+                .select({ permission: courseRolePermissions.permissionKey })
+                .from(courseRolePermissions)
+                .where(eq(courseRolePermissions.courseRoleId, roleId));
+            return {
+                ...updatedRole,
+                permissions: currentPermissions.map(({ permission }) => permission),
+            };
         });
+    }
+
+    async deleteRole(courseId: string, roleId: string) {
+        const assigned = await this.db
+            .select({ memberId: courseMemberRoles.courseMemberId })
+            .from(courseMemberRoles)
+            .innerJoin(courseRoles, eq(courseRoles.id, courseMemberRoles.courseRoleId))
+            .where(and(eq(courseRoles.id, roleId), eq(courseRoles.courseId, courseId)))
+            .limit(1);
+        if (assigned.length > 0) throw new ConflictException('Role has assigned users');
+
+        const deleted = await this.db
+            .delete(courseRoles)
+            .where(and(eq(courseRoles.id, roleId), eq(courseRoles.courseId, courseId)))
+            .returning({ id: courseRoles.id });
+        if (deleted.length === 0) throw new NotFoundException('Role not found');
     }
 
     async findMembers(courseId: string) {

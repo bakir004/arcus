@@ -129,6 +129,7 @@ export class MaterialsController {
         @Param('groupId', ParseUUIDPipe) groupId: string,
     ) {
         await this.service.deleteGroup(courseId, groupId);
+        return { success: true };
     }
 
     @Post()
@@ -230,5 +231,6 @@ export class MaterialsController {
     @ApiUnauthorizedResponse({ type: ErrorResponseDto })
     async remove(@Param('courseId', ParseUUIDPipe) courseId: string, @Param('materialId', ParseUUIDPipe) id: string) {
         await this.service.delete(courseId, id);
+        return { success: true };
     }
 }

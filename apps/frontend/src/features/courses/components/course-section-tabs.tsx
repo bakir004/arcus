@@ -39,8 +39,12 @@ export function CourseSectionTabs({ courseCode }: { courseCode: string }) {
             false);
 
     return (
-        <Box as="nav" className="border-b border-border px-6" aria-label="Course sections">
-            <Group className="min-w-max overflow-x-auto" gap={6}>
+        <Box
+            as="nav"
+            className="relative z-10 block w-full shrink-0 overflow-x-auto overflow-y-hidden border-b border-border px-6 scrollbar-thin"
+            aria-label="Course sections"
+        >
+            <Group className="w-max min-w-full" gap={6}>
                 {courseSections.map((section) => {
                     if (section.staffOnly && !canAccessStaffSections) return null;
                     if (section.studentOnly && !isStudent) return null;
@@ -52,12 +56,12 @@ export function CourseSectionTabs({ courseCode }: { courseCode: string }) {
                         <Link
                             key={section.label}
                             to={href}
-                            className="relative inline-flex h-11 items-center whitespace-nowrap text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[active=true]:text-foreground"
+                            className="relative inline-flex h-11 shrink-0 items-center whitespace-nowrap text-sm font-medium text-muted-foreground transition-colors hover:text-foreground data-[active=true]:text-foreground"
                             data-active={isActive}
                         >
                             {section.label}
                             {isActive ? (
-                                <Box className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-primary" />
+                                <Box className="absolute inset-x-0 bottom-2 h-0.5 rounded-full bg-primary" />
                             ) : null}
                         </Link>
                     );
