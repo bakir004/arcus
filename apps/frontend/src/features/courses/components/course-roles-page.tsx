@@ -272,7 +272,7 @@ export function CourseRolesPage({ courseCode }: { courseCode: string }) {
                                                         {hasAssignedUsers ? (
                                                             <Tooltip>
                                                                 <TooltipTrigger asChild>
-                                                                    <span tabIndex={0}>{deleteButton}</span>
+                                                                    <span>{deleteButton}</span>
                                                                 </TooltipTrigger>
                                                                 <TooltipContent>
                                                                     There are users with this role. Reassign their roles
