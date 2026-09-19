@@ -58,7 +58,7 @@ describe('MaterialsController', () => {
         await expect(controller.createGroup(courseId, { name: 'new' } as never)).resolves.toBe(group);
         await expect(controller.updateGroup(courseId, groupId, { name: 'updated' } as never)).resolves.toBe(group);
         await expect(controller.moveGroup(courseId, groupId, { position: 1 } as never)).resolves.toBe(group);
-        await expect(controller.deleteGroup(courseId, groupId)).resolves.toBeUndefined();
+        await expect(controller.deleteGroup(courseId, groupId)).resolves.toEqual({ success: true });
         expect(service.deleteGroup).toHaveBeenCalledWith(courseId, groupId);
     });
 
@@ -76,7 +76,7 @@ describe('MaterialsController', () => {
         await expect(controller.update(courseId, materialId, { visibility: false } as never, file)).resolves.toBe(
             material,
         );
-        await expect(controller.remove(courseId, materialId)).resolves.toBeUndefined();
+        await expect(controller.remove(courseId, materialId)).resolves.toEqual({ success: true });
         expect(service.delete).toHaveBeenCalledWith(courseId, materialId);
     });
 });

@@ -91,7 +91,8 @@
       "!src/auth.ts",
       "!src/main.ts",
       "!src/swagger.ts",
-      "!src/database/**"
+      "!src/database/**",
+      "!src/**/*.controller.ts"
     ],
     "coverageDirectory": "../coverage",
     "coverageThreshold": {
@@ -100,12 +101,6 @@
         "functions": 90,
         "lines": 90,
         "statements": 90
-      },
-      "./src/**/*.controller.ts": {
-        "branches": 0,
-        "functions": 0,
-        "lines": 0,
-        "statements": 0
       }
     },
     "testEnvironment": "node"
