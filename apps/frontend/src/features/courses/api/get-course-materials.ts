@@ -40,6 +40,7 @@ export interface MaterialGroup {
     name: string;
     description: string | null;
     labeled: boolean;
+    weekStartDate: string | null;
     materials: CourseMaterial[];
     createdAt: string;
     updatedAt: string;

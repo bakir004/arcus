@@ -12,6 +12,14 @@ import { CourseGroupsRepository } from './groups.repository';
 import { MaterialsRepository } from './materials.repository';
 import { getMaterialRepository, parseMaterialInput } from './materials.repository.registry';
 
+const normalizeWeekStartDate = (value: string | null | undefined): string | null => {
+    if (value == null) return null;
+    const date = new Date(`${value}T00:00:00Z`);
+    const day = date.getUTCDay();
+    date.setUTCDate(date.getUTCDate() - ((day + 6) % 7));
+    return date.toISOString().slice(0, 10);
+};
+
 @Injectable()
 export class MaterialsService {
     constructor(
@@ -41,6 +49,7 @@ export class MaterialsService {
             name: dto.name.trim(),
             description: dto.description?.trim() || null,
             labeled: dto.labeled ?? true,
+            ...(dto.weekStartDate === undefined ? {} : { weekStartDate: normalizeWeekStartDate(dto.weekStartDate) }),
         });
     }
 
@@ -64,6 +73,7 @@ export class MaterialsService {
             ...(dto.name === undefined ? {} : { name: dto.name.trim() }),
             ...(dto.description === undefined ? {} : { description: dto.description?.trim() || null }),
             ...(dto.labeled === undefined ? {} : { labeled: dto.labeled }),
+            ...(dto.weekStartDate === undefined ? {} : { weekStartDate: normalizeWeekStartDate(dto.weekStartDate) }),
         });
     }
 

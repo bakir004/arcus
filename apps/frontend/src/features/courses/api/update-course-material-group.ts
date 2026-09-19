@@ -1,30 +1,22 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/api/api-client';
 
-export interface CreateCourseMaterialGroupRequest {
+export interface UpdateCourseMaterialGroupRequest {
     courseId: string;
+    groupId: string;
     name: string;
     description?: string;
     labeled?: boolean;
     weekStartDate?: string | null;
 }
 
-export const createCourseMaterialGroupRequest = ({
-    courseId,
-    name,
-    description,
-    labeled,
-    weekStartDate,
-}: CreateCourseMaterialGroupRequest) =>
-    apiClient(`/courses/${courseId}/materials/groups`, {
-        method: 'POST',
-        body: { name, description, labeled, weekStartDate },
-    });
+export const updateCourseMaterialGroupRequest = ({ courseId, groupId, ...body }: UpdateCourseMaterialGroupRequest) =>
+    apiClient(`/courses/${courseId}/materials/groups/${groupId}`, { method: 'PATCH', body });
 
-export const useCreateCourseMaterialGroup = () => {
+export const useUpdateCourseMaterialGroup = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: createCourseMaterialGroupRequest,
+        mutationFn: updateCourseMaterialGroupRequest,
         onSuccess: (_group, variables) => {
             void queryClient.invalidateQueries({ queryKey: ['courses', variables.courseId, 'materials'] });
         },

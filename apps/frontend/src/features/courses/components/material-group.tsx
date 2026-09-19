@@ -1,14 +1,23 @@
 import { memo, useCallback, useEffect, useState, type HTMLAttributes } from 'react';
-import { ClipboardList, ChevronDown, GripVertical } from 'lucide-react';
+import { CalendarDays, ClipboardList, ChevronDown, GripVertical, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Box, Group } from '@/components/common';
 import type { CourseMaterial, MaterialGroup } from '../api/get-course-materials';
 import { useMoveCourseMaterial } from '../api/move-course-material';
+import { useDeleteCourseMaterialGroup } from '../api/delete-course-material-group';
 import { toast } from 'sonner';
 import { title } from './material-utils';
 import { MaterialRow } from './material-row';
+import { EditCourseMaterialGroupDialog } from './course-material-dialogs';
+import { DeleteCourseMaterialGroupDialog } from './delete-course-material-group-dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 function SortableMaterial({
     courseId,
@@ -78,6 +87,14 @@ export function SortableGroupCard({
     );
 }
 
+function formatWeekRange(weekStartDate: string) {
+    const start = new Date(`${weekStartDate}T00:00:00`);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    const format = (date: Date) => date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    return `${format(start)} - ${format(end)}`;
+}
+
 const GroupMaterialList = memo(function GroupMaterialList({
     courseId,
     materials,
@@ -127,8 +144,11 @@ function GroupCard({
 }) {
     const [materials, setMaterials] = useState(group.materials);
     const [collapsed, setCollapsed] = useState(false);
+    const [editOpen, setEditOpen] = useState(false);
+    const [deleteOpen, setDeleteOpen] = useState(false);
     const isLabeled = group.labeled;
     const { mutateAsync: moveMaterial } = useMoveCourseMaterial();
+    const deleteGroup = useDeleteCourseMaterialGroup();
     useEffect(() => setMaterials(group.materials), [group.materials]);
     const reorder = useCallback(
         ({ active, over }: DragEndEvent) => {
@@ -183,14 +203,92 @@ function GroupCard({
                                 <p className="mt-1 text-sm text-muted-foreground">{group.description}</p>
                             )}
                         </div>
+                        {group.weekStartDate && (
+                            <span className="flex shrink-0 items-center gap-1.5 text-sm text-muted-foreground">
+                                <CalendarDays className="size-4" />
+                                {formatWeekRange(group.weekStartDate)}
+                            </span>
+                        )}
                         <ChevronDown
                             className={`size-4 shrink-0 text-muted-foreground transition-transform ${collapsed ? '-rotate-90' : ''}`}
                         />
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button
+                                    type="button"
+                                    aria-label={`Actions for ${group.name}`}
+                                    className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                                >
+                                    <MoreVertical className="size-4" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                                align="end"
+                                onPointerDown={(event) => event.stopPropagation()}
+                                onClick={(event) => event.stopPropagation()}
+                            >
+                                <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+                                    <Pencil /> Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
+                                    <Trash2 /> Delete
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </>
                 ) : (
-                    <h2 className="min-w-0 flex-1 truncate text-sm italic text-muted-foreground">{group.name}</h2>
+                    <>
+                        <h2 className="min-w-0 flex-1 truncate text-sm italic text-muted-foreground">{group.name}</h2>
+                        {group.weekStartDate && (
+                            <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                <CalendarDays className="size-4" />
+                                {formatWeekRange(group.weekStartDate)}
+                            </span>
+                        )}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button
+                                    type="button"
+                                    aria-label={`Actions for ${group.name}`}
+                                    className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                                >
+                                    <MoreVertical className="size-4" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                                align="end"
+                                onPointerDown={(event) => event.stopPropagation()}
+                                onClick={(event) => event.stopPropagation()}
+                            >
+                                <DropdownMenuItem onSelect={() => setEditOpen(true)}>
+                                    <Pencil /> Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem variant="destructive" onSelect={() => setDeleteOpen(true)}>
+                                    <Trash2 /> Delete
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </>
                 )}
             </Group>
+            <EditCourseMaterialGroupDialog
+                courseId={courseId}
+                group={group}
+                open={editOpen}
+                onOpenChange={setEditOpen}
+            />
+            <DeleteCourseMaterialGroupDialog
+                name={group.name}
+                open={deleteOpen}
+                onOpenChange={setDeleteOpen}
+                pending={deleteGroup.isPending}
+                onConfirm={() => {
+                    void deleteGroup
+                        .mutateAsync({ courseId, groupId: group.id })
+                        .then(() => setDeleteOpen(false))
+                        .catch(() => toast.error('Failed to delete material group.'));
+                }}
+            />
             {(!isLabeled || !collapsed) && (
                 <GroupMaterialList
                     courseId={courseId}

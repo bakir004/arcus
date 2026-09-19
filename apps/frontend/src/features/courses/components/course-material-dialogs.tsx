@@ -13,9 +13,12 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { WeekDatePicker } from '@/components/ui/week-date-picker';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { CourseMaterial, MaterialGroup } from '../api/get-course-materials';
 import { useCreateCourseMaterial } from '../api/create-course-material';
 import { useCreateCourseMaterialGroup } from '../api/create-course-material-group';
+import { useUpdateCourseMaterialGroup } from '../api/update-course-material-group';
 import { useUpdateCourseMaterial } from '../api/update-course-material';
 import { isValidHttpUrl } from './material-utils';
 
@@ -30,17 +33,19 @@ export function CreateCourseMaterialGroupDialog({
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [labeled, setLabeled] = useState(true);
+    const [weekStartDate, setWeekStartDate] = useState<string | null>(null);
     const createGroup = useCreateCourseMaterialGroup();
 
     const submit = async (event: SubmitEvent<HTMLFormElement>) => {
         event.preventDefault();
         try {
-            await createGroup.mutateAsync({ courseId, name, description, labeled });
+            await createGroup.mutateAsync({ courseId, name, description, labeled, weekStartDate });
             toast.success('Material group created.');
             onCreated?.(name);
             setName('');
             setDescription('');
             setLabeled(true);
+            setWeekStartDate(null);
             setOpen(false);
         } catch {
             toast.error('Failed to create material group.');
@@ -83,6 +88,10 @@ export function CreateCourseMaterialGroupDialog({
                             className="min-h-24 w-full rounded-lg border border-border bg-card px-2.5 py-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
                         />
                     </div>
+                    <div className="space-y-2">
+                        <Label>Calendar week (optional)</Label>
+                        <WeekDatePicker value={weekStartDate} onChange={setWeekStartDate} />
+                    </div>
                     <div className="flex items-start gap-3">
                         <input
                             id="material-group-labeled"
@@ -106,6 +115,109 @@ export function CreateCourseMaterialGroupDialog({
                         </Button>
                         <Button type="submit" disabled={createGroup.isPending}>
                             {createGroup.isPending && <Loader2 className="size-4 animate-spin" />}Create
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+export function EditCourseMaterialGroupDialog({
+    courseId,
+    group,
+    open,
+    onOpenChange,
+}: {
+    courseId: string;
+    group: MaterialGroup;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+}) {
+    const [name, setName] = useState(group.name);
+    const [description, setDescription] = useState(group.description ?? '');
+    const [labeled, setLabeled] = useState(group.labeled);
+    const [weekStartDate, setWeekStartDate] = useState<string | null>(group.weekStartDate);
+    const updateGroup = useUpdateCourseMaterialGroup();
+
+    useEffect(() => {
+        setName(group.name);
+        setDescription(group.description ?? '');
+        setLabeled(group.labeled);
+        setWeekStartDate(group.weekStartDate);
+    }, [group]);
+
+    const submit = async (event: SubmitEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        try {
+            await updateGroup.mutateAsync({ courseId, groupId: group.id, name, description, labeled, weekStartDate });
+            toast.success('Material group updated.');
+            onOpenChange(false);
+        } catch {
+            toast.error('Failed to update material group.');
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <form onSubmit={submit} className="space-y-5">
+                    <DialogHeader>
+                        <DialogTitle>Edit material group</DialogTitle>
+                        <DialogDescription>Update this material group.</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-2">
+                        <Label htmlFor={`edit-material-group-name-${group.id}`}>Title</Label>
+                        <Input
+                            id={`edit-material-group-name-${group.id}`}
+                            value={name}
+                            onChange={(event) => setName(event.target.value)}
+                            required
+                            maxLength={200}
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor={`edit-material-group-description-${group.id}`}>Description</Label>
+                        <textarea
+                            id={`edit-material-group-description-${group.id}`}
+                            value={description}
+                            onChange={(event) => setDescription(event.target.value)}
+                            maxLength={2000}
+                            className="min-h-24 w-full rounded-lg border border-border bg-card px-2.5 py-2 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                        />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Calendar week (optional)</Label>
+                        <WeekDatePicker value={weekStartDate} onChange={setWeekStartDate} />
+                    </div>
+                    <div className="flex items-start gap-3">
+                        <input
+                            id={`edit-material-group-labeled-${group.id}`}
+                            type="checkbox"
+                            checked={labeled}
+                            aria-describedby={`edit-material-group-labeled-description-${group.id}`}
+                            onChange={(event) => setLabeled(event.target.checked)}
+                            className="mt-1 size-4 rounded border-input accent-primary"
+                        />
+                        <div className="space-y-1">
+                            <Label htmlFor={`edit-material-group-labeled-${group.id}`}>
+                                Show title and description
+                            </Label>
+                            <p
+                                id={`edit-material-group-labeled-description-${group.id}`}
+                                className="text-xs text-muted-foreground"
+                            >
+                                Turn this off for an unlabeled section. The title remains visible to professors when
+                                managing and moving materials so they can distinguish it from other unlabeled sections.
+                            </p>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                            Cancel
+                        </Button>
+                        <Button type="submit" disabled={updateGroup.isPending}>
+                            Save
                         </Button>
                     </DialogFooter>
                 </form>
@@ -314,33 +426,35 @@ export function CreateCourseMaterialDialog({
                         <DialogTitle>Create course material</DialogTitle>
                         <DialogDescription>Add a file, link, or text note for this course.</DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-2">
-                        <Label htmlFor="material-kind">Type</Label>
-                        <select
-                            id="material-kind"
-                            value={kind}
-                            onChange={(event) => setKind(event.target.value as typeof kind)}
-                            className="h-9 w-full rounded-lg border border-border bg-card px-2.5 text-sm"
-                        >
-                            <option value="FILE">File</option>
-                            <option value="LINK">Link</option>
-                            <option value="TEXT">Text note</option>
-                        </select>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="material-group">Group</Label>
-                        <select
-                            id="material-group"
-                            value={groupId}
-                            onChange={(event) => setGroupId(event.target.value)}
-                            className="h-9 w-full rounded-lg border border-border bg-card px-2.5 text-sm"
-                        >
-                            {groups.map((group) => (
-                                <option key={group.id} value={group.id}>
-                                    {group.name}
-                                </option>
-                            ))}
-                        </select>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="material-kind">Type</Label>
+                            <Select value={kind} onValueChange={(value) => setKind(value as typeof kind)}>
+                                <SelectTrigger id="material-kind" aria-label="Material type">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="FILE">File</SelectItem>
+                                    <SelectItem value="LINK">Link</SelectItem>
+                                    <SelectItem value="TEXT">Text note</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="material-group">Group</Label>
+                            <Select value={groupId} onValueChange={setGroupId}>
+                                <SelectTrigger id="material-group" aria-label="Material group">
+                                    <SelectValue placeholder="Choose a group" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {groups.map((group) => (
+                                        <SelectItem key={group.id} value={group.id}>
+                                            {group.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
                     {kind !== 'TEXT' ? (
                         <>

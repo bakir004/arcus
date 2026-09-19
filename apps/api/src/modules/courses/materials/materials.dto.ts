@@ -1,6 +1,17 @@
 import { Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { IsBoolean, IsInt, IsNotEmpty, IsObject, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
+import {
+    IsBoolean,
+    IsDateString,
+    IsInt,
+    IsNotEmpty,
+    IsObject,
+    IsOptional,
+    IsString,
+    IsUUID,
+    MaxLength,
+    Min,
+} from 'class-validator';
 import type { Material, MaterialGroup } from './materials.entity';
 import { getAllMaterialRepositories, getMaterialRepository } from './materials.repository.registry';
 
@@ -73,6 +84,11 @@ export class CreateMaterialGroupDto {
     @IsOptional()
     @IsBoolean()
     labeled?: boolean;
+
+    @ApiPropertyOptional({ nullable: true, format: 'date', description: 'Monday of the associated calendar week.' })
+    @IsOptional()
+    @IsDateString()
+    weekStartDate?: string | null;
 }
 
 export class EditMaterialGroupDto extends PartialType(CreateMaterialGroupDto) {}
@@ -140,6 +156,8 @@ export class MaterialGroupResponseDto {
     description: string | null;
     @ApiProperty()
     labeled: boolean;
+    @ApiPropertyOptional({ nullable: true, format: 'date' })
+    weekStartDate: string | null;
     @ApiProperty({ type: 'array', items: materialResponseApiSchema })
     materials: MaterialResponseDto[];
     @ApiProperty({ format: 'date-time' })
