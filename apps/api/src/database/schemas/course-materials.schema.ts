@@ -36,6 +36,7 @@ export const courseMaterials = pgTable(
             .references(() => courseGroups.id, { onDelete: 'cascade' }),
         position: integer('position').notNull(),
         kind: courseMaterialKind('kind').notNull(),
+        visibility: boolean('visibility').default(true).notNull(),
         textContent: text('text_content'),
         title: text('title'),
         description: text('description'),

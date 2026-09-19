@@ -95,26 +95,28 @@ export function CourseMaterialsPage() {
     return (
         <Box as="main" id="top" className="mx-auto flex w-full max-w-7xl gap-8 px-6 py-10">
             <Box className="min-w-0 flex-1">
-                {isProfessor && (
-                    <div className="mb-4 flex flex-wrap justify-end gap-2">
-                        <CreateCourseMaterialGroupDialog courseId={course.id} onCreated={setScrollTarget} />
-                        <CreateCourseMaterialDialog
-                            courseId={course.id}
-                            groups={materialGroups}
-                            onCreated={setScrollTarget}
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+                    <div className="relative w-full max-w-md">
+                        <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <input
+                            value={search}
+                            onChange={(event) => setSearch(event.target.value)}
+                            placeholder="Search course materials..."
+                            className="h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring"
                         />
                     </div>
-                )}
-                <div className="relative max-w-md">
-                    <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                    <input
-                        value={search}
-                        onChange={(event) => setSearch(event.target.value)}
-                        placeholder="Search course materials..."
-                        className="h-10 w-full rounded-md border border-input bg-background pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-ring"
-                    />
+                    {isProfessor && (
+                        <div className="flex flex-wrap gap-2">
+                            <CreateCourseMaterialGroupDialog courseId={course.id} onCreated={setScrollTarget} />
+                            <CreateCourseMaterialDialog
+                                courseId={course.id}
+                                groups={materialGroups}
+                                onCreated={setScrollTarget}
+                            />
+                        </div>
+                    )}
                 </div>
-                <div className="mt-6 space-y-4">
+                <div className="space-y-4">
                     {isLoading ? (
                         <div className="rounded-lg border border-border bg-card p-8 text-center text-muted-foreground">
                             Loading materials…

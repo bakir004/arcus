@@ -10,13 +10,21 @@ export interface CreateCourseMaterialRequest {
     courseId: string;
     groupId: string;
     input: CreateMaterialInput;
+    visibility?: boolean;
     file?: File;
 }
 
-export const createCourseMaterialRequest = ({ courseId, groupId, input, file }: CreateCourseMaterialRequest) => {
+export const createCourseMaterialRequest = ({
+    courseId,
+    groupId,
+    input,
+    visibility,
+    file,
+}: CreateCourseMaterialRequest) => {
     const body = new FormData();
     body.append('input', JSON.stringify(input));
     body.append('groupId', groupId);
+    body.append('visibility', String(visibility ?? true));
     if (file) body.append('file', file);
     return apiClient(`/courses/${courseId}/materials`, { method: 'POST', body });
 };

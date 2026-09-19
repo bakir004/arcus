@@ -25,6 +25,7 @@ export type CreateFileMaterial = FileMaterialInput & {
     uploadedById: string;
     courseGroupId: string;
     position: number;
+    visibility?: boolean;
     fileKey: string;
     fileName?: string | null;
     fileMimeType?: string | null;

@@ -15,6 +15,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Session, type UserSession } from '@thallesp/nestjs-better-auth';
 import type { auth } from '@/auth';
+import { AuthzService } from '@/authz/authz.service';
 import {
     ApiBadRequestResponse,
     ApiBody,
@@ -50,7 +51,10 @@ import { MaterialsService } from './materials.service';
 @ApiExtraModels(MaterialGroupResponseDto)
 @Controller({ path: 'courses/:courseId/materials', version: '1' })
 export class MaterialsController {
-    constructor(private readonly service: MaterialsService) {}
+    constructor(
+        private readonly service: MaterialsService,
+        private readonly authzService: AuthzService,
+    ) {}
 
     @Get()
     @ApiOperation({ summary: 'List course material groups' })
@@ -65,8 +69,9 @@ export class MaterialsController {
     @ApiBadRequestResponse({ type: ErrorResponseDto })
     @ApiNotFoundResponse({ type: ErrorResponseDto })
     @ApiUnauthorizedResponse({ type: ErrorResponseDto })
-    async findAll(@Param('courseId', ParseUUIDPipe) courseId: string) {
-        const content = await this.service.findCourseContent(courseId);
+    async findAll(@Param('courseId', ParseUUIDPipe) courseId: string, @Session() session: UserSession<typeof auth>) {
+        const context = await this.authzService.getCourseAuthzContext(session.user.id, courseId);
+        const content = await this.service.findCourseContent(courseId, context.roles.includes('Student'));
 
         return content.map((group) => MaterialGroupResponseDto.fromEntity(group));
     }

@@ -241,11 +241,13 @@ export function EditCourseMaterialDialog({
     const [description, setDescription] = useState('');
     const [externalUrl, setExternalUrl] = useState('');
     const [textContent, setTextContent] = useState('');
+    const [visibility, setVisibility] = useState(true);
     const [file, setFile] = useState<File | undefined>();
     const updateMaterial = useUpdateCourseMaterial();
 
     useEffect(() => {
         setFile(undefined);
+        setVisibility(material.visibility);
         if (material.kind === 'TEXT') setTextContent(material.textContent);
         if (material.kind === 'LINK') {
             setTitleValue(material.title);
@@ -267,7 +269,7 @@ export function EditCourseMaterialDialog({
                   ? { kind: 'LINK' as const, title: titleValue, description, externalUrl: externalUrl.trim() }
                   : { kind: 'FILE' as const, title: titleValue, description };
         try {
-            await updateMaterial.mutateAsync({ courseId, materialId: material.id, input, file });
+            await updateMaterial.mutateAsync({ courseId, materialId: material.id, input, visibility, file });
             toast.success('Course material updated.');
             onOpenChange(false);
         } catch {
@@ -339,6 +341,16 @@ export function EditCourseMaterialDialog({
                             />
                         </div>
                     )}
+                    <div className="flex items-start gap-3">
+                        <input
+                            id={`edit-visibility-${material.id}`}
+                            type="checkbox"
+                            checked={visibility}
+                            onChange={(event) => setVisibility(event.target.checked)}
+                            className="size-4 rounded border-input accent-primary"
+                        />
+                        <Label className="mt-0.25" htmlFor={`edit-visibility-${material.id}`}>Visible to students</Label>
+                    </div>
                     <DialogFooter>
                         <Button type="submit" disabled={updateMaterial.isPending}>
                             Save
@@ -366,6 +378,7 @@ export function CreateCourseMaterialDialog({
     const [description, setDescription] = useState('');
     const [externalUrl, setExternalUrl] = useState('');
     const [textContent, setTextContent] = useState('');
+    const [visibility, setVisibility] = useState(true);
     const [file, setFile] = useState<File | undefined>();
     const createMaterial = useCreateCourseMaterial();
     useEffect(() => {
@@ -379,6 +392,7 @@ export function CreateCourseMaterialDialog({
         setDescription('');
         setExternalUrl('');
         setTextContent('');
+        setVisibility(true);
         setFile(undefined);
     };
     const submit = async (event: SubmitEvent<HTMLFormElement>) => {
@@ -402,7 +416,7 @@ export function CreateCourseMaterialDialog({
                   ? { kind, title: titleValue, description, externalUrl: externalUrl.trim() }
                   : { kind, textContent };
         try {
-            await createMaterial.mutateAsync({ courseId, groupId, input, file });
+            await createMaterial.mutateAsync({ courseId, groupId, input, visibility, file });
             toast.success('Course material created.');
             onCreated?.(groupId);
             reset();
@@ -518,6 +532,16 @@ export function CreateCourseMaterialDialog({
                             />
                         </div>
                     )}
+                    <div className="flex items-start gap-3">
+                        <input
+                            id="material-visibility"
+                            type="checkbox"
+                            checked={visibility}
+                            onChange={(event) => setVisibility(event.target.checked)}
+                            className="size-4 rounded border-input accent-primary"
+                        />
+                        <Label htmlFor="material-visibility">Visible to students</Label>
+                    </div>
                     <DialogFooter>
                         <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                             Cancel

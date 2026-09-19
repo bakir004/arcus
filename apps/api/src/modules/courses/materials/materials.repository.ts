@@ -15,12 +15,13 @@ export class MaterialsRepository {
         return getMaterialRepository(record.kind).fromRecord(record);
     }
 
-    async findCourseContent(courseId: string): Promise<MaterialGroup[]> {
+    async findCourseContent(courseId: string, visibleOnly = false): Promise<MaterialGroup[]> {
         const groups = await this.database.query.courseGroups.findMany({
             where: (group) => eq(group.courseId, courseId),
             orderBy: (group) => asc(group.position),
             with: {
                 materials: {
+                    where: visibleOnly ? (material) => eq(material.visibility, true) : undefined,
                     orderBy: (material) => asc(material.position),
                 },
             },
@@ -65,6 +66,17 @@ export class MaterialsRepository {
     async updateContent(courseId: string, id: string, data: EditMaterialContent): Promise<Material> {
         await this.findById(courseId, id);
         return getMaterialRepository(data.kind).update(this.database, id, data);
+    }
+
+    async updateVisibility(courseId: string, id: string, visibility: boolean): Promise<Material> {
+        await this.findById(courseId, id);
+        const [record] = await this.database
+            .update(courseMaterials)
+            .set({ visibility, updatedAt: new Date() })
+            .where(eq(courseMaterials.id, id))
+            .returning();
+        if (!record) throw MaterialNotFound(id);
+        return this.toMaterial(record);
     }
 
     async updatePositionRanges(

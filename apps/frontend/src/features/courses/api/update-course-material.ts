@@ -6,12 +6,20 @@ export interface UpdateCourseMaterialRequest {
     courseId: string;
     materialId: string;
     input?: CreateMaterialInput;
+    visibility?: boolean;
     file?: File;
 }
 
-export const updateCourseMaterialRequest = ({ courseId, materialId, input, file }: UpdateCourseMaterialRequest) => {
+export const updateCourseMaterialRequest = ({
+    courseId,
+    materialId,
+    input,
+    visibility,
+    file,
+}: UpdateCourseMaterialRequest) => {
     const body = new FormData();
     if (input) body.append('input', JSON.stringify(input));
+    if (visibility !== undefined) body.append('visibility', String(visibility));
     if (file) body.append('file', file);
     return apiClient(`/courses/${courseId}/materials/${materialId}`, { method: 'PATCH', body });
 };

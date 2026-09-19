@@ -48,7 +48,7 @@ function SortableMaterial({
                             aria-label={`Reorder ${title(material)}`}
                             {...attributes}
                             {...listeners}
-                            className="flex size-7 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
+                            className="flex size-7 shrink-0 mt-1 self-start cursor-grab touch-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted"
                         >
                             <GripVertical className="size-4" />
                         </button>

@@ -41,7 +41,7 @@ export type CreateCourseMaterial = typeof courseMaterials.$inferInsert;
 /** Fields shared by every material kind. Kind-specific content belongs to its own type. */
 export type MaterialBase = Pick<
     CourseMaterial,
-    'id' | 'uploadedById' | 'courseGroupId' | 'position' | 'createdAt' | 'updatedAt'
+    'id' | 'uploadedById' | 'courseGroupId' | 'position' | 'visibility' | 'createdAt' | 'updatedAt'
 >;
 
 export type { FileMaterial, LinkMaterial, TextMaterial };

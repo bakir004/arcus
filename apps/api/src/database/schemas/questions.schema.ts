@@ -1,5 +1,6 @@
 import {
     boolean,
+    foreignKey,
     index,
     integer,
     numeric,
@@ -36,9 +37,7 @@ export const examQuestionMultipleChoiceChoices = pgTable(
     'exam_question_multiple_choice_choices',
     {
         id: uuid('id').primaryKey().defaultRandom(),
-        questionId: uuid('question_id')
-            .notNull()
-            .references(() => examQuestions.id, { onDelete: 'cascade' }),
+        questionId: uuid('question_id').notNull(),
         choiceText: varchar('choice_text', { length: 512 }).notNull(),
         position: integer('position').notNull(),
         isCorrect: boolean('is_correct').notNull(),
@@ -46,6 +45,11 @@ export const examQuestionMultipleChoiceChoices = pgTable(
     (t) => [
         index('exam_q_mc_choices_question_id_idx').on(t.questionId),
         unique('exam_q_mc_choices_question_position_uniq').on(t.questionId, t.position),
+        foreignKey({
+            columns: [t.questionId],
+            foreignColumns: [examQuestions.id],
+            name: 'exam_q_mc_choices_question_fk',
+        }).onDelete('cascade'),
     ],
 );
 
@@ -53,9 +57,7 @@ export const examQuestionCodingTestCases = pgTable(
     'exam_question_coding_test_cases',
     {
         id: uuid('id').primaryKey().defaultRandom(),
-        questionId: uuid('question_id')
-            .notNull()
-            .references(() => examQuestions.id, { onDelete: 'cascade' }),
+        questionId: uuid('question_id').notNull(),
         input: text('input').notNull(),
         expectedOutput: text('expected_output').notNull(),
         name: text('name'),
@@ -65,6 +67,11 @@ export const examQuestionCodingTestCases = pgTable(
     (t) => [
         index('exam_q_coding_cases_question_id_idx').on(t.questionId),
         unique('exam_q_coding_cases_question_position_uniq').on(t.questionId, t.position),
+        foreignKey({
+            columns: [t.questionId],
+            foreignColumns: [examQuestions.id],
+            name: 'exam_q_coding_cases_question_fk',
+        }).onDelete('cascade'),
     ],
 );
 

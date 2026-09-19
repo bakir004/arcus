@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ArrowUpDown, Download, ExternalLink, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { ArrowUpDown, Download, Eye, EyeOff, ExternalLink, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
     DropdownMenu,
@@ -17,6 +17,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { getCourseMaterialUrlRequest, type CourseMaterial, type MaterialGroup } from '../api/get-course-materials';
 import { useDeleteCourseMaterial } from '../api/delete-course-material';
 import { useMoveCourseMaterial } from '../api/move-course-material';
+import { useUpdateCourseMaterial } from '../api/update-course-material';
 import { bytes, extension, isPlatformLink, language, materialAppearance, previewable, title } from './material-utils';
 import { CodeDialog } from './code-dialog';
 import { DeleteCourseMaterialDialog } from './delete-course-material-dialog';
@@ -61,6 +62,7 @@ export function MaterialRow({
     const [editOpen, setEditOpen] = useState(false);
     const [deleteOpen, setDeleteOpen] = useState(false);
     const moveMaterial = useMoveCourseMaterial();
+    const updateMaterial = useUpdateCourseMaterial();
     const deleteMaterial = useDeleteCourseMaterial();
     const fileName =
         material.kind === 'FILE'
@@ -107,7 +109,7 @@ export function MaterialRow({
     if (material.kind === 'TEXT')
         return (
             <>
-                <div className="flex items-start gap-3 px-5 py-5">
+                <div className="flex items-start gap-2 px-5 py-5">
                     {dragHandle}
                     <div
                         className={`markdown-preview prose prose-sm dark:prose-invert min-w-0 max-w-none flex-1 overflow-x-auto break-words ${isDark ? '' : 'prism-theme-light'}`}
@@ -116,13 +118,49 @@ export function MaterialRow({
                             {material.textContent}
                         </ReactMarkdown>
                     </div>
+                    {canManage && (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <button
+                                        type="button"
+                                        disabled={updateMaterial.isPending}
+                                        onClick={() =>
+                                            void updateMaterial
+                                                .mutateAsync({
+                                                    courseId,
+                                                    materialId: material.id,
+                                                    visibility: !material.visibility,
+                                                })
+                                                .catch(() => toast.error('Failed to update material visibility.'))
+                                        }
+                                        aria-label={
+                                            material.visibility
+                                                ? 'Hide material from students'
+                                                : 'Show material to students'
+                                        }
+                                        className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+                                    >
+                                        {material.visibility ? (
+                                            <Eye className="size-4" />
+                                        ) : (
+                                            <EyeOff className="size-4" />
+                                        )}
+                                    </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    This material is {material.visibility ? '' : 'not '}visible to students
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <button
                                 type="button"
                                 hidden={!canManage}
                                 aria-label={`Actions for ${title(material)}`}
-                                className="-ml-2 flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                                className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
                             >
                                 <MoreVertical className="size-4" />
                             </button>
@@ -184,9 +222,9 @@ export function MaterialRow({
         );
     return (
         <>
-            <div className="flex items-center gap-3 px-5 py-3.5">
+            <div className="flex items-center gap-2 px-5 py-3.5">
                 {dragHandle}
-                <div className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${iconColor}`}>
+                <div className={`flex size-9 shrink-0 self-start items-center justify-center rounded-lg ${iconColor}`}>
                     <Icon className="size-4" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -206,7 +244,11 @@ export function MaterialRow({
                         )}
                     </div>
                     {material.description && (
-                        <p className="mt-0.5 truncate text-xs text-muted-foreground">{material.description}</p>
+                        <p
+                            className={`mt-0.5 text-xs text-muted-foreground ${material.kind === 'FILE' ? 'whitespace-normal break-words leading-relaxed opacity-85' : 'truncate'}`}
+                        >
+                            {material.description}
+                        </p>
                     )}
                 </div>
                 {material.kind === 'LINK' ? (
@@ -235,13 +277,45 @@ export function MaterialRow({
                         </Tooltip>
                     </TooltipProvider>
                 )}
+                {canManage && (
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <button
+                                    type="button"
+                                    disabled={updateMaterial.isPending}
+                                    onClick={() =>
+                                        void updateMaterial
+                                            .mutateAsync({
+                                                courseId,
+                                                materialId: material.id,
+                                                visibility: !material.visibility,
+                                            })
+                                            .catch(() => toast.error('Failed to update material visibility.'))
+                                    }
+                                    aria-label={
+                                        material.visibility
+                                            ? 'Hide material from students'
+                                            : 'Show material to students'
+                                    }
+                                    className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-50"
+                                >
+                                    {material.visibility ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                This material is {material.visibility ? '' : 'not '}visible to students
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                )}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <button
                             type="button"
                             hidden={!canManage}
                             aria-label={`Actions for ${title(material)}`}
-                            className="-ml-2 flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                            className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
                         >
                             <MoreVertical className="size-4" />
                         </button>

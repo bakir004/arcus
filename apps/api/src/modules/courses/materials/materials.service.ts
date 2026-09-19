@@ -28,8 +28,8 @@ export class MaterialsService {
         private readonly storage: StorageService,
     ) {}
 
-    findCourseContent(courseId: string): Promise<MaterialGroup[]> {
-        return this.materials.findCourseContent(courseId);
+    findCourseContent(courseId: string, visibleOnly = false): Promise<MaterialGroup[]> {
+        return this.materials.findCourseContent(courseId, visibleOnly);
     }
 
     findById(courseId: string, materialId: string): Promise<Material> {
@@ -108,6 +108,7 @@ export class MaterialsService {
                 uploadedById,
                 courseGroupId: dto.groupId,
                 position: await this.materials.nextGroupPosition(dto.groupId),
+                visibility: dto.visibility ?? true,
             });
         } catch (error) {
             if (content) await this.storage.cleanup(getMaterialRepository(content.kind).resourceKey(content));
@@ -130,7 +131,9 @@ export class MaterialsService {
         try {
             content = await handler.prepareEdit(input, current, file, this.storage);
             const replacementKey = handler.resourceKey(content);
-            const updated = await this.materials.updateContent(courseId, materialId, content);
+            let updated = await this.materials.updateContent(courseId, materialId, content);
+            if (dto.visibility !== undefined)
+                updated = await this.materials.updateVisibility(courseId, materialId, dto.visibility);
             if (currentKey !== replacementKey) await this.storage.cleanup(currentKey);
             return updated;
         } catch (error) {

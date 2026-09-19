@@ -5,6 +5,7 @@ export interface MaterialBase {
     id: string;
     courseGroupId: string;
     position: number;
+    visibility: boolean;
     createdAt: string;
     updatedAt: string;
 }

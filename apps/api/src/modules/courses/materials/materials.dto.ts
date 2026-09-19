@@ -38,6 +38,7 @@ export const materialCreateApiSchema = {
     type: 'object',
     required: ['groupId', 'input'],
     properties: {
+        visibility: { type: 'boolean', default: true, description: 'Whether this material is visible to students.' },
         groupId: { type: 'string', format: 'uuid', description: 'Destination group.' },
         input: {
             ...materialInputApiProperty,
@@ -54,6 +55,7 @@ export const materialCreateApiSchema = {
 export const materialUpdateApiSchema = {
     type: 'object',
     properties: {
+        visibility: { type: 'boolean', description: 'Whether this material is visible to students.' },
         input: {
             ...materialInputApiProperty,
             description:
@@ -94,6 +96,12 @@ export class CreateMaterialGroupDto {
 export class EditMaterialGroupDto extends PartialType(CreateMaterialGroupDto) {}
 
 export class CreateMaterialDto {
+    @ApiPropertyOptional({ default: true, description: 'Whether this material is visible to students.' })
+    @Transform(({ value }) => value === true || value === 'true')
+    @IsOptional()
+    @IsBoolean()
+    visibility?: boolean;
+
     @ApiProperty({
         ...materialInputApiProperty,
         description: 'Type-specific material input. The kind property is the discriminator.',
@@ -108,6 +116,12 @@ export class CreateMaterialDto {
 }
 
 export class EditMaterialDto {
+    @ApiPropertyOptional({ description: 'Whether this material is visible to students.' })
+    @Transform(({ value }) => value === true || value === 'true')
+    @IsOptional()
+    @IsBoolean()
+    visibility?: boolean;
+
     @ApiPropertyOptional({
         ...materialInputApiProperty,
         description:

@@ -28,6 +28,7 @@ export type CreateLinkMaterial = LinkMaterialInput & {
     uploadedById: string;
     courseGroupId: string;
     position: number;
+    visibility?: boolean;
 };
 
 export type EditLinkMaterial = LinkMaterialInput;

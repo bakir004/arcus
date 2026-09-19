@@ -19,6 +19,7 @@ export type CreateTextMaterial = TextMaterialInput & {
     uploadedById: string;
     courseGroupId: string;
     position: number;
+    visibility?: boolean;
 };
 
 export type EditTextMaterial = TextMaterialInput;
