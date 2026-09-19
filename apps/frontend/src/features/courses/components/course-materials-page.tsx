@@ -16,7 +16,8 @@ import { CreateCourseMaterialDialog, CreateCourseMaterialGroupDialog } from './c
 import { fuzzyMatch, groupAnchor, scrollToGroup, title } from './material-utils';
 
 export function CourseMaterialsPage() {
-    const { code } = useParams({ from: '/courses/$code/materials' });
+    const { code: routeCode } = useParams({ strict: false });
+    const code = routeCode ?? '';
     const { data: course, isLoading: courseLoading } = useGetCourseByCode(code);
     const { data: content, isLoading, isError } = useGetCourseMaterials(course?.id ?? '');
     const { data: courseMe } = useGetCourseMe(course?.id ?? '');

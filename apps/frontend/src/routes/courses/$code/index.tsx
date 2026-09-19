@@ -1,26 +1,18 @@
-import { Link, createFileRoute } from '@tanstack/react-router';
-import { Button } from '@/components/ui/button';
+import { createFileRoute } from '@tanstack/react-router';
+import { CourseMaterialsPage } from '@/features/courses/components/course-materials-page';
+import { courseMeOptions } from '@/features/courses/api/get-course-me';
+import { courseMaterialsOptions } from '@/features/courses/api/get-course-materials';
+import { courseByCodeOptions } from '@/features/courses/api/get-course';
+import { queryClient } from '@/lib/query-client';
 
-export const Route = createFileRoute('/courses/$code/')({ component: CoursePage });
+export const Route = createFileRoute('/courses/$code/')({
+    loader: async ({ params }) => {
+        const course = await queryClient.query(courseByCodeOptions(params.code));
 
-function CoursePage() {
-    const { code } = Route.useParams();
-
-    return (
-        <main>
-            <p>Course</p>
-            <div className="mt-4 flex gap-2">
-                <Button asChild>
-                    <Link to="/courses/$code/materials" params={{ code }}>
-                        Course materials
-                    </Link>
-                </Button>
-                <Button asChild variant="outline">
-                    <Link to="/courses/$code/admin" params={{ code }}>
-                        Course admin
-                    </Link>
-                </Button>
-            </div>
-        </main>
-    );
-}
+        await Promise.all([
+            queryClient.query(courseMaterialsOptions(course.id)).catch(() => undefined),
+            queryClient.query(courseMeOptions(course.id)).catch(() => undefined),
+        ]);
+    },
+    component: CourseMaterialsPage,
+});

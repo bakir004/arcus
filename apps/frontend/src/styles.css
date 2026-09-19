@@ -325,6 +325,16 @@ body {
 code[class*="language-"],
 pre[class*="language-"] {
     color: #d4d4d4;
+    background-color: var(--muted);
+}
+
+.markdown-preview pre {
+    background-color: var(--muted) !important;
+    color: var(--foreground);
+}
+
+.markdown-preview pre code {
+    background-color: transparent !important;
 }
 
 .token.comment,
@@ -405,6 +415,11 @@ pre[class*="language-"] {
 .prism-theme-light code[class*="language-"],
 .prism-theme-light pre[class*="language-"] {
     color: #000000;
+    background-color: var(--muted);
+}
+
+.prism-theme-light pre {
+    background-color: var(--muted) !important;
 }
 
 .prism-theme-light .token.comment,

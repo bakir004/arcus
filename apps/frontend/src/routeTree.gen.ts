@@ -11,9 +11,18 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as CoursesCodeRouteImport } from './routes/courses/$code'
 import { Route as CoursesCodeIndexRouteImport } from './routes/courses/$code/index'
 import { Route as CoursesCodeAdminRouteImport } from './routes/courses/$code/admin'
+import { Route as CoursesCodeAnalyticsRouteImport } from './routes/courses/$code/analytics'
+import { Route as CoursesCodeAssignmentsRouteImport } from './routes/courses/$code/assignments'
+import { Route as CoursesCodeExamsRouteImport } from './routes/courses/$code/exams'
+import { Route as CoursesCodeGradebookRouteImport } from './routes/courses/$code/gradebook'
+import { Route as CoursesCodeGradesRouteImport } from './routes/courses/$code/grades'
 import { Route as CoursesCodeMaterialsRouteImport } from './routes/courses/$code/materials'
+import { Route as CoursesCodeReviewRouteImport } from './routes/courses/$code/review'
+import { Route as CoursesCodeRolesRouteImport } from './routes/courses/$code/roles'
+import { Route as CoursesCodeSettingsRouteImport } from './routes/courses/$code/settings'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -25,42 +34,113 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CoursesCodeIndexRoute = CoursesCodeIndexRouteImport.update({
-  id: '/courses/$code/',
-  path: '/courses/$code/',
+const CoursesCodeRoute = CoursesCodeRouteImport.update({
+  id: '/courses/$code',
+  path: '/courses/$code',
   getParentRoute: () => rootRouteImport,
+} as any)
+const CoursesCodeIndexRoute = CoursesCodeIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CoursesCodeRoute,
 } as any)
 const CoursesCodeAdminRoute = CoursesCodeAdminRouteImport.update({
-  id: '/courses/$code/admin',
-  path: '/courses/$code/admin',
-  getParentRoute: () => rootRouteImport,
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => CoursesCodeRoute,
+} as any)
+const CoursesCodeAnalyticsRoute = CoursesCodeAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => CoursesCodeRoute,
+} as any)
+const CoursesCodeAssignmentsRoute = CoursesCodeAssignmentsRouteImport.update({
+  id: '/assignments',
+  path: '/assignments',
+  getParentRoute: () => CoursesCodeRoute,
+} as any)
+const CoursesCodeExamsRoute = CoursesCodeExamsRouteImport.update({
+  id: '/exams',
+  path: '/exams',
+  getParentRoute: () => CoursesCodeRoute,
+} as any)
+const CoursesCodeGradebookRoute = CoursesCodeGradebookRouteImport.update({
+  id: '/gradebook',
+  path: '/gradebook',
+  getParentRoute: () => CoursesCodeRoute,
+} as any)
+const CoursesCodeGradesRoute = CoursesCodeGradesRouteImport.update({
+  id: '/grades',
+  path: '/grades',
+  getParentRoute: () => CoursesCodeRoute,
 } as any)
 const CoursesCodeMaterialsRoute = CoursesCodeMaterialsRouteImport.update({
-  id: '/courses/$code/materials',
-  path: '/courses/$code/materials',
-  getParentRoute: () => rootRouteImport,
+  id: '/materials',
+  path: '/materials',
+  getParentRoute: () => CoursesCodeRoute,
+} as any)
+const CoursesCodeReviewRoute = CoursesCodeReviewRouteImport.update({
+  id: '/review',
+  path: '/review',
+  getParentRoute: () => CoursesCodeRoute,
+} as any)
+const CoursesCodeRolesRoute = CoursesCodeRolesRouteImport.update({
+  id: '/roles',
+  path: '/roles',
+  getParentRoute: () => CoursesCodeRoute,
+} as any)
+const CoursesCodeSettingsRoute = CoursesCodeSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => CoursesCodeRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/courses/$code': typeof CoursesCodeRouteWithChildren
   '/courses/$code/admin': typeof CoursesCodeAdminRoute
+  '/courses/$code/analytics': typeof CoursesCodeAnalyticsRoute
+  '/courses/$code/assignments': typeof CoursesCodeAssignmentsRoute
+  '/courses/$code/exams': typeof CoursesCodeExamsRoute
+  '/courses/$code/gradebook': typeof CoursesCodeGradebookRoute
+  '/courses/$code/grades': typeof CoursesCodeGradesRoute
   '/courses/$code/materials': typeof CoursesCodeMaterialsRoute
+  '/courses/$code/review': typeof CoursesCodeReviewRoute
+  '/courses/$code/roles': typeof CoursesCodeRolesRoute
+  '/courses/$code/settings': typeof CoursesCodeSettingsRoute
   '/courses/$code/': typeof CoursesCodeIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/courses/$code/admin': typeof CoursesCodeAdminRoute
+  '/courses/$code/analytics': typeof CoursesCodeAnalyticsRoute
+  '/courses/$code/assignments': typeof CoursesCodeAssignmentsRoute
+  '/courses/$code/exams': typeof CoursesCodeExamsRoute
+  '/courses/$code/gradebook': typeof CoursesCodeGradebookRoute
+  '/courses/$code/grades': typeof CoursesCodeGradesRoute
   '/courses/$code/materials': typeof CoursesCodeMaterialsRoute
+  '/courses/$code/review': typeof CoursesCodeReviewRoute
+  '/courses/$code/roles': typeof CoursesCodeRolesRoute
+  '/courses/$code/settings': typeof CoursesCodeSettingsRoute
   '/courses/$code': typeof CoursesCodeIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/courses/$code': typeof CoursesCodeRouteWithChildren
   '/courses/$code/admin': typeof CoursesCodeAdminRoute
+  '/courses/$code/analytics': typeof CoursesCodeAnalyticsRoute
+  '/courses/$code/assignments': typeof CoursesCodeAssignmentsRoute
+  '/courses/$code/exams': typeof CoursesCodeExamsRoute
+  '/courses/$code/gradebook': typeof CoursesCodeGradebookRoute
+  '/courses/$code/grades': typeof CoursesCodeGradesRoute
   '/courses/$code/materials': typeof CoursesCodeMaterialsRoute
+  '/courses/$code/review': typeof CoursesCodeReviewRoute
+  '/courses/$code/roles': typeof CoursesCodeRolesRoute
+  '/courses/$code/settings': typeof CoursesCodeSettingsRoute
   '/courses/$code/': typeof CoursesCodeIndexRoute
 }
 export interface FileRouteTypes {
@@ -68,31 +148,55 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/courses/$code'
     | '/courses/$code/admin'
+    | '/courses/$code/analytics'
+    | '/courses/$code/assignments'
+    | '/courses/$code/exams'
+    | '/courses/$code/gradebook'
+    | '/courses/$code/grades'
     | '/courses/$code/materials'
+    | '/courses/$code/review'
+    | '/courses/$code/roles'
+    | '/courses/$code/settings'
     | '/courses/$code/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/courses/$code/admin'
+    | '/courses/$code/analytics'
+    | '/courses/$code/assignments'
+    | '/courses/$code/exams'
+    | '/courses/$code/gradebook'
+    | '/courses/$code/grades'
     | '/courses/$code/materials'
+    | '/courses/$code/review'
+    | '/courses/$code/roles'
+    | '/courses/$code/settings'
     | '/courses/$code'
   id:
     | '__root__'
     | '/'
     | '/login'
+    | '/courses/$code'
     | '/courses/$code/admin'
+    | '/courses/$code/analytics'
+    | '/courses/$code/assignments'
+    | '/courses/$code/exams'
+    | '/courses/$code/gradebook'
+    | '/courses/$code/grades'
     | '/courses/$code/materials'
+    | '/courses/$code/review'
+    | '/courses/$code/roles'
+    | '/courses/$code/settings'
     | '/courses/$code/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
-  CoursesCodeAdminRoute: typeof CoursesCodeAdminRoute
-  CoursesCodeMaterialsRoute: typeof CoursesCodeMaterialsRoute
-  CoursesCodeIndexRoute: typeof CoursesCodeIndexRoute
+  CoursesCodeRoute: typeof CoursesCodeRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -111,36 +215,129 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/courses/$code': {
+      id: '/courses/$code'
+      path: '/courses/$code'
+      fullPath: '/courses/$code'
+      preLoaderRoute: typeof CoursesCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/courses/$code/': {
       id: '/courses/$code/'
-      path: '/courses/$code'
+      path: '/'
       fullPath: '/courses/$code/'
       preLoaderRoute: typeof CoursesCodeIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof CoursesCodeRoute
     }
     '/courses/$code/admin': {
       id: '/courses/$code/admin'
-      path: '/courses/$code/admin'
+      path: '/admin'
       fullPath: '/courses/$code/admin'
       preLoaderRoute: typeof CoursesCodeAdminRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof CoursesCodeRoute
+    }
+    '/courses/$code/analytics': {
+      id: '/courses/$code/analytics'
+      path: '/analytics'
+      fullPath: '/courses/$code/analytics'
+      preLoaderRoute: typeof CoursesCodeAnalyticsRouteImport
+      parentRoute: typeof CoursesCodeRoute
+    }
+    '/courses/$code/assignments': {
+      id: '/courses/$code/assignments'
+      path: '/assignments'
+      fullPath: '/courses/$code/assignments'
+      preLoaderRoute: typeof CoursesCodeAssignmentsRouteImport
+      parentRoute: typeof CoursesCodeRoute
+    }
+    '/courses/$code/exams': {
+      id: '/courses/$code/exams'
+      path: '/exams'
+      fullPath: '/courses/$code/exams'
+      preLoaderRoute: typeof CoursesCodeExamsRouteImport
+      parentRoute: typeof CoursesCodeRoute
+    }
+    '/courses/$code/gradebook': {
+      id: '/courses/$code/gradebook'
+      path: '/gradebook'
+      fullPath: '/courses/$code/gradebook'
+      preLoaderRoute: typeof CoursesCodeGradebookRouteImport
+      parentRoute: typeof CoursesCodeRoute
+    }
+    '/courses/$code/grades': {
+      id: '/courses/$code/grades'
+      path: '/grades'
+      fullPath: '/courses/$code/grades'
+      preLoaderRoute: typeof CoursesCodeGradesRouteImport
+      parentRoute: typeof CoursesCodeRoute
     }
     '/courses/$code/materials': {
       id: '/courses/$code/materials'
-      path: '/courses/$code/materials'
+      path: '/materials'
       fullPath: '/courses/$code/materials'
       preLoaderRoute: typeof CoursesCodeMaterialsRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof CoursesCodeRoute
+    }
+    '/courses/$code/review': {
+      id: '/courses/$code/review'
+      path: '/review'
+      fullPath: '/courses/$code/review'
+      preLoaderRoute: typeof CoursesCodeReviewRouteImport
+      parentRoute: typeof CoursesCodeRoute
+    }
+    '/courses/$code/roles': {
+      id: '/courses/$code/roles'
+      path: '/roles'
+      fullPath: '/courses/$code/roles'
+      preLoaderRoute: typeof CoursesCodeRolesRouteImport
+      parentRoute: typeof CoursesCodeRoute
+    }
+    '/courses/$code/settings': {
+      id: '/courses/$code/settings'
+      path: '/settings'
+      fullPath: '/courses/$code/settings'
+      preLoaderRoute: typeof CoursesCodeSettingsRouteImport
+      parentRoute: typeof CoursesCodeRoute
     }
   }
 }
 
+interface CoursesCodeRouteChildren {
+  CoursesCodeAdminRoute: typeof CoursesCodeAdminRoute
+  CoursesCodeAnalyticsRoute: typeof CoursesCodeAnalyticsRoute
+  CoursesCodeAssignmentsRoute: typeof CoursesCodeAssignmentsRoute
+  CoursesCodeExamsRoute: typeof CoursesCodeExamsRoute
+  CoursesCodeGradebookRoute: typeof CoursesCodeGradebookRoute
+  CoursesCodeGradesRoute: typeof CoursesCodeGradesRoute
+  CoursesCodeMaterialsRoute: typeof CoursesCodeMaterialsRoute
+  CoursesCodeReviewRoute: typeof CoursesCodeReviewRoute
+  CoursesCodeRolesRoute: typeof CoursesCodeRolesRoute
+  CoursesCodeSettingsRoute: typeof CoursesCodeSettingsRoute
+  CoursesCodeIndexRoute: typeof CoursesCodeIndexRoute
+}
+
+const CoursesCodeRouteChildren: CoursesCodeRouteChildren = {
+  CoursesCodeAdminRoute: CoursesCodeAdminRoute,
+  CoursesCodeAnalyticsRoute: CoursesCodeAnalyticsRoute,
+  CoursesCodeAssignmentsRoute: CoursesCodeAssignmentsRoute,
+  CoursesCodeExamsRoute: CoursesCodeExamsRoute,
+  CoursesCodeGradebookRoute: CoursesCodeGradebookRoute,
+  CoursesCodeGradesRoute: CoursesCodeGradesRoute,
+  CoursesCodeMaterialsRoute: CoursesCodeMaterialsRoute,
+  CoursesCodeReviewRoute: CoursesCodeReviewRoute,
+  CoursesCodeRolesRoute: CoursesCodeRolesRoute,
+  CoursesCodeSettingsRoute: CoursesCodeSettingsRoute,
+  CoursesCodeIndexRoute: CoursesCodeIndexRoute,
+}
+
+const CoursesCodeRouteWithChildren = CoursesCodeRoute._addFileChildren(
+  CoursesCodeRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
-  CoursesCodeAdminRoute: CoursesCodeAdminRoute,
-  CoursesCodeMaterialsRoute: CoursesCodeMaterialsRoute,
-  CoursesCodeIndexRoute: CoursesCodeIndexRoute,
+  CoursesCodeRoute: CoursesCodeRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

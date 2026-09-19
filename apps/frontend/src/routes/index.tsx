@@ -1,13 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
 
-import { Button } from '@/components/ui/button';
+import { DashboardPage } from '@/features/dashboards/components/dashboard-page';
 
-export const Route = createFileRoute('/')({ component: Home });
-
-function Home() {
-    return (
-        <main className="flex min-h-screen items-center justify-center">
-            <Button>Arcus</Button>
-        </main>
-    );
-}
+export const Route = createFileRoute('/')({ component: DashboardPage });
