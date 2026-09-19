@@ -23,4 +23,8 @@ describe('material repository registry', () => {
         });
         expect(() => parseMaterialInput({ kind: 'LINK', title: 'Missing URL' })).toThrow();
     });
+
+    it('rejects unknown material kinds', () => {
+        expect(() => getMaterialRepository('UNKNOWN' as never)).toThrow('No repository registered');
+    });
 });

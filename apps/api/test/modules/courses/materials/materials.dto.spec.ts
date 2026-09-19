@@ -19,12 +19,28 @@ describe('material DTOs', () => {
         });
         expect(await validate(dto)).toEqual([]);
         expect(dto.input).toEqual({ kind: 'LINK', title: 'Docs', externalUrl: 'https://example.com' });
+        expect(
+            plainToInstance(CreateMaterialDto, {
+                input: { kind: 'TEXT', textContent: 'x' },
+                groupId: GROUP_ID,
+                visibility: true,
+            }).visibility,
+        ).toBe(true);
+        expect(
+            plainToInstance(CreateMaterialDto, {
+                input: { kind: 'TEXT', textContent: 'x' },
+                groupId: GROUP_ID,
+                visibility: 'false',
+            }).visibility,
+        ).toBe(false);
     });
 
     it('requires create input and permits an empty update', async () => {
         expect(await errors({})).not.toEqual([]);
         expect(await errors({}, EditMaterialDto)).toEqual([]);
         expect(await errors({ input: 'not-json' }, EditMaterialDto)).not.toEqual([]);
+        expect(plainToInstance(EditMaterialDto, { visibility: true }).visibility).toBe(true);
+        expect(plainToInstance(EditMaterialDto, { visibility: 'false' }).visibility).toBe(false);
     });
 
     it('requires a material group title and accepts the labeled flag', async () => {

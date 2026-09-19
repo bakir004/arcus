@@ -32,6 +32,54 @@ function createService() {
 describe('StorageService', () => {
     beforeEach(() => jest.clearAllMocks());
 
+    it('falls back to the private endpoint when no public endpoint is configured', () => {
+        const config = {
+            getOrThrow: jest.fn(
+                (key: string) =>
+                    ({ MINIO_ENDPOINT: 'http://localhost:9000', MINIO_ACCESS_KEY: 'a', MINIO_SECRET_KEY: 's' })[key],
+            ),
+            get: jest.fn().mockReturnValue(undefined),
+        };
+        expect(() => new StorageService(config as never)).not.toThrow();
+    });
+
+    it('uploads a file and preserves its original name and extension', async () => {
+        const { service, s3 } = createService();
+        const file = {
+            originalname: 'Report.PDF',
+            mimetype: 'application/pdf',
+            size: 12,
+            buffer: Buffer.from('file'),
+        } as Express.Multer.File;
+
+        await expect(service.upload(file)).resolves.toEqual(
+            expect.objectContaining({
+                fileName: 'Report.PDF',
+                mimeType: 'application/pdf',
+                size: 12,
+            }),
+        );
+        expect(s3.send).toHaveBeenCalledWith(
+            expect.objectContaining({
+                input: expect.objectContaining({ Body: Buffer.from('file'), ContentType: 'application/pdf' }),
+            }),
+        );
+    });
+
+    it('uses a fallback name and ignores cleanup failures', async () => {
+        const { service, s3 } = createService();
+        const file = {
+            originalname: '',
+            mimetype: 'application/octet-stream',
+            size: 0,
+            buffer: Buffer.alloc(0),
+        } as Express.Multer.File;
+        await expect(service.upload(file)).resolves.toMatchObject({ fileName: 'file' });
+        s3.send.mockRejectedValue(new Error('delete failed'));
+        await expect(service.cleanup('key')).resolves.toBeUndefined();
+        await expect(service.cleanup(undefined)).resolves.toBeUndefined();
+    });
+
     it('uploads an object with its key and MIME type', async () => {
         const { service, s3 } = createService();
 
@@ -52,7 +100,11 @@ describe('StorageService', () => {
     it('lists objects by prefix and ignores entries without keys', async () => {
         const { service, s3 } = createService();
         s3.send.mockResolvedValue({
-            Contents: [{ Key: 'courses/course-1/a.pdf', Size: 12, LastModified: new Date('2026-01-01') }, { Size: 99 }],
+            Contents: [
+                { Key: 'courses/course-1/a.pdf', Size: 12, LastModified: new Date('2026-01-01') },
+                { Key: 'courses/course-1/defaults' },
+                { Size: 99 },
+            ],
         });
 
         await expect(service.listObjects('courses/course-1/')).resolves.toEqual([
@@ -61,7 +113,14 @@ describe('StorageService', () => {
                 size: 12,
                 lastModified: new Date('2026-01-01'),
             },
+            {
+                key: 'courses/course-1/defaults',
+                size: 0,
+                lastModified: expect.any(Date),
+            },
         ]);
+        s3.send.mockResolvedValue({});
+        await expect(service.listObjects('empty/')).resolves.toEqual([]);
 
         const command = s3.send.mock.calls[0][0];
         expect(command).toBeInstanceOf(ListObjectsV2Command);
