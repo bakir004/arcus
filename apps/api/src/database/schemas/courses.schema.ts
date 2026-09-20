@@ -1,4 +1,5 @@
-import { index, primaryKey, pgTable, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+import { index, primaryKey, pgTable, text, timestamp, uniqueIndex, uuid, varchar } from 'drizzle-orm/pg-core';
 import { user } from './auth.schema';
 import { faculties } from './faculties.schema';
 
@@ -55,6 +56,7 @@ export const courseRoles = pgTable(
     },
     (t) => [
         index('course_roles_course_id_idx').on(t.courseId),
+        uniqueIndex('course_roles_course_id_name_unique').on(t.courseId, sql`lower(${t.name})`),
         index('course_roles_created_by_id_idx').on(t.createdById),
     ],
 );

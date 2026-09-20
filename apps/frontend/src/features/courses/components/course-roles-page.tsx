@@ -31,6 +31,13 @@ function getInitials(name: string, email: string) {
         .join('');
 }
 
+function getRoleErrorMessage(error: unknown, action: 'create' | 'rename') {
+    if (error && typeof error === 'object' && 'status' in error && error.status === 409) {
+        return 'A role with this name already exists in this course.';
+    }
+    return action === 'create' ? 'Could not create role.' : 'Could not rename role.';
+}
+
 export function CourseRolesPage({ courseCode }: { courseCode: string }) {
     const { data: course } = useGetCourseByCode(courseCode);
     const courseId = course?.id ?? '';
@@ -132,8 +139,8 @@ export function CourseRolesPage({ courseCode }: { courseCode: string }) {
             setSelectedRoleId(role.id);
             setRoleManagementOpen(false);
             toast.success('Role created.');
-        } catch {
-            toast.error('Could not create role.');
+        } catch (error) {
+            toast.error(getRoleErrorMessage(error, 'create'));
         }
     };
 
@@ -148,8 +155,8 @@ export function CourseRolesPage({ courseCode }: { courseCode: string }) {
             await renameRole.mutateAsync({ roleId: editingRoleId, name: editingRoleName.trim() });
             setEditingRoleId(null);
             toast.success('Role renamed.');
-        } catch {
-            toast.error('Could not rename role.');
+        } catch (error) {
+            toast.error(getRoleErrorMessage(error, 'rename'));
         }
     };
 

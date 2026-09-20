@@ -63,13 +63,13 @@ export class RolesController {
 
     @Delete(':roleId')
     @ApiOperation({ summary: 'Delete a course role' })
-    deleteRole(@Param('courseId', ParseUUIDPipe) courseId: string, @Param('roleId', ParseUUIDPipe) roleId: string) {
+    async deleteRole(@Param('courseId', ParseUUIDPipe) courseId: string, @Param('roleId', ParseUUIDPipe) roleId: string) {
         return this.rolesService.deleteRole(courseId, roleId).then(() => ({ success: true }));
     }
 
     @Patch('members/:memberId/role')
     @ApiOperation({ summary: 'Assign a role to an enrolled member' })
-    assignRole(
+    async assignRole(
         @Param('courseId', ParseUUIDPipe) courseId: string,
         @Param('memberId', ParseUUIDPipe) memberId: string,
         @Body() dto: AssignCourseMemberRoleDto,

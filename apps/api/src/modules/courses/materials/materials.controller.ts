@@ -3,8 +3,6 @@ import {
     Controller,
     Delete,
     Get,
-    // HttpCode,
-    // HttpStatus,
     Param,
     ParseUUIDPipe,
     Patch,
@@ -116,7 +114,6 @@ export class MaterialsController {
     }
 
     @Delete('groups/:groupId')
-    // @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'Delete a material group' })
     @ApiParam({ name: 'courseId', format: 'uuid' })
     @ApiParam({ name: 'groupId', format: 'uuid' })
@@ -222,7 +219,6 @@ export class MaterialsController {
     }
 
     @Delete(':materialId')
-    // @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'Delete a course material' })
     @ApiParam({ name: 'courseId', format: 'uuid' })
     @ApiParam({ name: 'materialId', format: 'uuid' })
