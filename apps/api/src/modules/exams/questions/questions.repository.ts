@@ -1,10 +1,10 @@
 // Drizzle's transaction/query-builder types are intentionally hidden behind the repository facade.
 // @ts-nocheck
 import { Inject, Injectable } from '@nestjs/common';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { DATABASE } from '@/database/database.module';
 import type { Database } from '@/database/client';
-import { examQuestions } from '@/database/schema';
+import { examAttempts, examItems, examItemStatements, examQuestions } from '@/database/schema';
 import {
     ExamNotFound,
     InvalidQuestionOrder,
@@ -26,7 +26,12 @@ import {
     getQuestionRepository,
 } from '@/modules/exams/questions/questions.repository.registry';
 
-type QuestionRow = typeof examQuestions.$inferSelect;
+type QuestionRow = typeof examQuestions.$inferSelect & {
+    examId: string;
+    prompt: string;
+    position: number;
+    points: string;
+};
 
 @Injectable()
 export class QuestionsRepository {
@@ -34,123 +39,127 @@ export class QuestionsRepository {
 
     create(examId: string, data: QuestionCreate): Promise<Question> {
         return this.db.transaction(async (tx) => {
-            const [row] = await tx
-                .insert(examQuestions)
-                .values({
-                    examId,
-                    prompt: data.prompt,
-                    position: data.position,
-                    points: String(data.points),
-                    type: data.options.type,
-                })
+            const [item] = await tx
+                .insert(examItems)
+                .values({ examId, position: data.position, maxPoints: String(data.points) })
                 .returning()
                 .catch((error) => {
                     throw this.mapError(error);
                 });
+            if (!item) throw QuestionCreationFailed();
 
+            await tx.insert(examItemStatements).values({ examItemId: item.id, prompt: data.prompt });
+            const [row] = await tx
+                .insert(examQuestions)
+                .values({ examItemId: item.id, type: data.options.type })
+                .returning()
+                .catch((error) => {
+                    throw this.mapError(error);
+                });
             if (!row) throw QuestionCreationFailed();
 
             await this.replaceOptions(tx, row.id, data.options);
-            return this.hydrateOptions(tx, row);
+            return this.hydrateOptions(tx, this.toQuestionRow(row, item, data.prompt));
         });
     }
 
     async findAllByExam(examId: string): Promise<Question[]> {
         await this.ensureExamExists(examId);
-
-        const rows = await this.db.query.examQuestions.findMany({
-            where: (question, { eq }) => eq(question.examId, examId),
-            orderBy: (question, { asc }) => asc(question.position),
-        });
-
+        const rows = await this.findRows(this.db, examId);
         return this.hydrateOptionsMany(this.db, rows);
     }
 
     async findById(examId: string, id: string): Promise<Question> {
-        const row = await this.db.query.examQuestions.findFirst({
-            where: (question, { and, eq }) => and(eq(question.id, id), eq(question.examId, examId)),
-        });
+        const rows = await this.findRows(this.db, examId, id);
+        if (!rows[0]) throw QuestionNotFound(id);
+        return this.hydrateOptions(this.db, rows[0]);
+    }
 
-        if (!row) throw QuestionNotFound(id);
+    async ensureItemExists(examId: string, examItemId: string): Promise<void> {
+        const [item] = await this.db
+            .select({ id: examItems.id })
+            .from(examItems)
+            .where(and(eq(examItems.id, examItemId), eq(examItems.examId, examId)))
+            .limit(1);
+        if (!item) throw QuestionNotFound(examItemId);
+    }
+
+    async findByItemId(examId: string, examItemId: string): Promise<Question> {
+        const rows = await this.findRows(this.db, examId);
+        const row = rows.find((candidate) => candidate.examItemId === examItemId);
+        if (!row) throw QuestionNotFound(examItemId);
         return this.hydrateOptions(this.db, row);
     }
 
-    update(examId: string, id: string, data: QuestionUpdate): Promise<Question> {
-        return this.db.transaction(async (tx) => {
-            const [row] = await tx
-                .update(examQuestions)
-                .set({
-                    ...(data.prompt !== undefined && { prompt: data.prompt }),
-                    ...(data.position !== undefined && {
-                        position: data.position,
-                    }),
-                    ...(data.points !== undefined && {
-                        points: String(data.points),
-                    }),
-                    ...(data.options !== undefined && {
-                        type: data.options.type,
-                    }),
-                })
-                .where(and(eq(examQuestions.id, id), eq(examQuestions.examId, examId)))
-                .returning()
-                .catch((error) => {
-                    throw this.mapError(error);
-                });
+    async update(examId: string, id: string, data: QuestionUpdate): Promise<Question> {
+        return this.db
+            .transaction(async (tx) => {
+                const existing = (await this.findRows(tx, examId, id))[0];
+                if (!existing) throw QuestionNotFound(id);
 
-            if (!row) throw QuestionNotFound(id);
+                await tx
+                    .update(examItems)
+                    .set({
+                        ...(data.position !== undefined && { position: data.position }),
+                        ...(data.points !== undefined && { maxPoints: String(data.points) }),
+                        updatedAt: new Date(),
+                    })
+                    .where(eq(examItems.id, existing.examItemId));
+                if (data.prompt !== undefined) {
+                    await tx
+                        .update(examItemStatements)
+                        .set({ prompt: data.prompt })
+                        .where(eq(examItemStatements.examItemId, existing.examItemId));
+                }
+                if (data.options !== undefined) {
+                    await tx.update(examQuestions).set({ type: data.options.type }).where(eq(examQuestions.id, id));
+                    await this.replaceOptions(tx, id, data.options);
+                }
 
-            if (data.options !== undefined) {
-                await this.replaceOptions(tx, id, data.options);
-                return questionSchema.parse({ ...row, options: data.options });
-            }
-
-            return this.hydrateOptions(tx, row);
-        });
+                const updated = (await this.findRows(tx, examId, id))[0];
+                return data.options !== undefined
+                    ? questionSchema.parse({ ...updated, options: data.options })
+                    : this.hydrateOptions(tx, updated);
+            })
+            .catch((error) => {
+                if (error?.code === '23505') throw QuestionPositionConflict();
+                throw error;
+            });
     }
 
     async reorder(examId: string, questionIds: string[]): Promise<Question[]> {
         return this.db.transaction(async (tx) => {
             const existing = await tx
-                .select({ id: examQuestions.id })
+                .select({ id: examQuestions.id, itemId: examQuestions.examItemId })
                 .from(examQuestions)
-                .where(eq(examQuestions.examId, examId));
-
-            if (
-                existing.length !== questionIds.length ||
-                existing.some((question) => !questionIds.includes(question.id))
-            ) {
+                .innerJoin(examItems, eq(examItems.id, examQuestions.examItemId))
+                .where(eq(examItems.examId, examId));
+            if (existing.length !== questionIds.length || existing.some((q) => !questionIds.includes(q.id))) {
                 throw InvalidQuestionOrder();
             }
 
-            await tx.execute(sql`set constraints exam_questions_exam_position_uniq deferred`);
-            for (const [index, id] of questionIds.entries()) {
+            // Move through negative positions to avoid unique-position collisions.
+            for (const [index, row] of existing.entries()) {
                 await tx
-                    .update(examQuestions)
-                    .set({ position: index + 1 })
-                    .where(and(eq(examQuestions.id, id), eq(examQuestions.examId, examId)));
+                    .update(examItems)
+                    .set({ position: -(index + 1) })
+                    .where(eq(examItems.id, row.itemId));
             }
-
-            const rows = await tx.query.examQuestions.findMany({
-                where: (question, { eq }) => eq(question.examId, examId),
-                orderBy: (question, { asc }) => asc(question.position),
-            });
-            return this.hydrateOptionsMany(tx, rows);
+            for (const [index, id] of questionIds.entries()) {
+                const row = existing.find((entry) => entry.id === id);
+                await tx
+                    .update(examItems)
+                    .set({ position: index + 1, updatedAt: new Date() })
+                    .where(eq(examItems.id, row.itemId));
+            }
+            return this.hydrateOptionsMany(tx, await this.findRows(tx, examId));
         });
     }
 
     async delete(examId: string, id: string): Promise<void> {
-        await this.db.transaction(async (tx) => {
-            const question = await tx.query.examQuestions.findFirst({
-                where: (table, { and, eq }) => and(eq(table.id, id), eq(table.examId, examId)),
-                columns: { id: true },
-            });
-
-            if (!question) throw QuestionNotFound(id);
-
-            await Promise.all(getAllQuestionRepositories().map((repository) => repository.clearOptions(tx, id)));
-
-            await tx.delete(examQuestions).where(eq(examQuestions.id, id));
-        });
+        const rows = await this.findRows(this.db, examId, id);
+        if (!rows[0]) throw QuestionNotFound(id);
+        await this.db.delete(examItems).where(eq(examItems.id, rows[0].examItemId));
     }
 
     async ensureExamExists(examId: string): Promise<void> {
@@ -158,13 +167,45 @@ export class QuestionsRepository {
             where: (entry, { eq }) => eq(entry.id, examId),
             columns: { id: true },
         });
-
         if (!exam) throw ExamNotFound(examId);
     }
 
-    // Attempts are not part of the migrated API yet; keep this seam for that module.
-    async hasAttempts(_examId: string): Promise<boolean> {
-        return false;
+    async hasAttempts(examId: string): Promise<boolean> {
+        const [attempt] = await this.db
+            .select({ id: examAttempts.id })
+            .from(examAttempts)
+            .where(eq(examAttempts.examId, examId))
+            .limit(1);
+        return Boolean(attempt);
+    }
+
+    private async findRows(db: DbExecutor, examId: string, questionId?: string): Promise<QuestionRow[]> {
+        const rows = await db
+            .select({
+                question: examQuestions,
+                item: examItems,
+                statement: examItemStatements,
+            })
+            .from(examQuestions)
+            .innerJoin(examItems, eq(examItems.id, examQuestions.examItemId))
+            .leftJoin(examItemStatements, eq(examItemStatements.examItemId, examItems.id))
+            .where(and(eq(examItems.examId, examId), ...(questionId ? [eq(examQuestions.id, questionId)] : [])))
+            .orderBy(asc(examItems.position));
+        return rows.map(({ question, item, statement }) => this.toQuestionRow(question, item, statement?.prompt));
+    }
+
+    private toQuestionRow(
+        question: typeof examQuestions.$inferSelect,
+        item: typeof examItems.$inferSelect,
+        prompt?: string,
+    ): QuestionRow {
+        return {
+            ...question,
+            examId: item.examId,
+            prompt: prompt ?? '',
+            position: item.position,
+            points: item.maxPoints,
+        };
     }
 
     private async replaceOptions(db: DbExecutor, questionId: string, options: QuestionOptions): Promise<void> {
@@ -179,24 +220,15 @@ export class QuestionsRepository {
 
     private async hydrateOptionsMany(db: DbExecutor, rows: QuestionRow[]): Promise<Question[]> {
         if (rows.length === 0) return [];
-
         const idsByType = new Map<QuestionRow['type'], string[]>();
-        for (const row of rows) {
-            const ids = idsByType.get(row.type) ?? [];
-            ids.push(row.id);
-            idsByType.set(row.type, ids);
-        }
-
+        for (const row of rows) idsByType.set(row.type, [...(idsByType.get(row.type) ?? []), row.id]);
         const optionsById = new Map<string, Question['options']>();
         await Promise.all(
-            [...idsByType.entries()].map(async ([type, questionIds]) => {
-                const optionsMap = await getQuestionRepository(type).loadOptionsMany(db, questionIds);
-                for (const [questionId, options] of optionsMap.entries()) {
-                    optionsById.set(questionId, options);
-                }
+            [...idsByType.entries()].map(async ([type, ids]) => {
+                const options = await getQuestionRepository(type).loadOptionsMany(db, ids);
+                for (const [id, value] of options) optionsById.set(id, value);
             }),
         );
-
         return rows.map((row) => {
             const options = optionsById.get(row.id);
             if (!options) throw QuestionOptionsNotFound(row.id);
@@ -206,12 +238,8 @@ export class QuestionsRepository {
 
     private mapError(error: unknown): Error {
         const code = (error as { code?: string })?.code;
-        if (code === '23505') {
-            return QuestionPositionConflict();
-        }
-        if (code === '23503') {
-            return ExamNotFound();
-        }
+        if (code === '23505') return QuestionPositionConflict();
+        if (code === '23503') return ExamNotFound();
         return error as Error;
     }
 }

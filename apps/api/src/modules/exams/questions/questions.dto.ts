@@ -123,6 +123,12 @@ export class QuestionResponseDto {
 
     @ApiProperty({
         format: 'uuid',
+        description: 'Gradeable exam item represented by this question.',
+    })
+    examItemId: string;
+
+    @ApiProperty({
+        format: 'uuid',
         description: 'Identifier of the exam this question belongs to.',
     })
     examId: string;

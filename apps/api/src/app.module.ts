@@ -11,6 +11,7 @@ import { MaterialsModule } from './modules/courses/materials/materials.module';
 import { RolesModule } from './modules/courses/roles/roles.module';
 import { ExamsModule } from './modules/exams/exams/exams.module';
 import { QuestionsModule } from './modules/exams/questions/questions.module';
+import { AnswersModule } from './modules/exams/answers/answers.module';
 import { StorageModule } from './storage/storage.module';
 
 @Module({
@@ -31,6 +32,7 @@ import { StorageModule } from './storage/storage.module';
         RolesModule,
         ExamsModule,
         QuestionsModule,
+        AnswersModule,
         StorageModule,
     ],
 })

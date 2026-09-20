@@ -5,3 +5,8 @@ export * from './enums.schema';
 export * from './faculties.schema';
 export * from './exams.schema';
 export * from './questions.schema';
+export * from './attempts.schema';
+export * from './answers.schema';
+export * from './executions.schema';
+export * from './timeslots.schema';
+export * from './announcements.schema';

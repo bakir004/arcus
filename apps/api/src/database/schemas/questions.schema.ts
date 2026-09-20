@@ -3,7 +3,7 @@ import {
     foreignKey,
     index,
     integer,
-    numeric,
+    jsonb,
     pgTable,
     text,
     timestamp,
@@ -12,25 +12,36 @@ import {
     varchar,
 } from 'drizzle-orm/pg-core';
 import { codingLanguageEnum, questionTypeEnum } from './enums.schema';
-import { exams } from './exams.schema';
+import { examItems } from './exams.schema';
 
+/** Platform-known question content. An exam item may exist without this row. */
 export const examQuestions = pgTable(
     'exam_questions',
     {
         id: uuid('id').primaryKey().defaultRandom(),
-        examId: uuid('exam_id')
+        examItemId: uuid('exam_item_id')
             .notNull()
-            .references(() => exams.id, { onDelete: 'cascade' }),
-        prompt: text('prompt').notNull(),
-        points: numeric('points', { precision: 6, scale: 2 }).notNull(),
-        position: integer('position').notNull(),
+            .references(() => examItems.id, { onDelete: 'cascade' }),
         type: questionTypeEnum('type').notNull(),
         createdAt: timestamp('created_at').defaultNow().notNull(),
     },
     (t) => [
-        index('exam_questions_exam_id_idx').on(t.examId),
-        unique('exam_questions_exam_position_uniq').on(t.examId, t.position),
+        index('exam_questions_exam_item_id_idx').on(t.examItemId),
+        unique('exam_questions_exam_item_uniq').on(t.examItemId),
     ],
+);
+
+export const examItemStatements = pgTable(
+    'exam_item_statements',
+    {
+        id: uuid('id').primaryKey().defaultRandom(),
+        examItemId: uuid('exam_item_id')
+            .notNull()
+            .references(() => examItems.id, { onDelete: 'cascade' }),
+        prompt: text('prompt').notNull(),
+        createdAt: timestamp('created_at').defaultNow().notNull(),
+    },
+    (t) => [unique('exam_item_statements_exam_item_uniq').on(t.examItemId)],
 );
 
 export const examQuestionMultipleChoiceChoices = pgTable(
@@ -63,6 +74,8 @@ export const examQuestionCodingTestCases = pgTable(
         name: text('name'),
         code: text('code'),
         position: integer('position').notNull(),
+        expectedStdout: text('expected_stdout'),
+        slots: jsonb('slots').$type<Record<string, string>>(),
     },
     (t) => [
         index('exam_q_coding_cases_question_id_idx').on(t.questionId),
@@ -82,9 +95,11 @@ export const examQuestionCodingConfigs = pgTable('exam_question_coding_configs',
     language: codingLanguageEnum('language').notNull(),
     mode: text('mode'),
     initialCode: text('initial_code'),
-    solutionCode: text('solution_code'),
+    professorCode: text('professor_code'),
     studentCodeTemplate: text('student_code_template'),
     testCodeTemplate: text('test_code_template'),
+    templates: jsonb('templates').$type<{ studentCode?: string; testCode?: string }>(),
+    slots: jsonb('slots').$type<Record<string, string>>(),
 });
 
 export const examQuestionEssayConfigs = pgTable('exam_question_essay_configs', {

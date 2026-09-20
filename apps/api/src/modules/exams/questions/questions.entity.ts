@@ -20,6 +20,7 @@ export type QuestionOptions = z.infer<typeof questionOptionsSchema>;
 
 export const questionSchema = z.object({
     id: z.uuid(),
+    examItemId: z.uuid(),
     examId: z.uuid(),
     prompt: z.string().trim().min(1).max(4000),
     position: z.number().int().min(1),
