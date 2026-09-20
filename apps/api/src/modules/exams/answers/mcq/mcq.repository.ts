@@ -4,7 +4,7 @@ import { z } from 'zod';
 import type { AnswerPayload } from '@/modules/exams/answers/answer.entity';
 import { examMultipleChoiceAnswerSelections, QuestionType } from '@/database/schema';
 import type { AnswerTypeRepository, DbExecutor } from '@/modules/exams/answers/answers.repository.interface';
-import { mcqAnswerSchema } from '@/modules/exams/answers/mcq/mc.entity';
+import { mcqAnswerSchema } from '@/modules/exams/answers/mcq/mcq.entity';
 
 export const mcqAnswerRepository: AnswerTypeRepository = {
     type: QuestionType.MultipleChoice,

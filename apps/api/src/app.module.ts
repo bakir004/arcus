@@ -12,6 +12,9 @@ import { RolesModule } from './modules/courses/roles/roles.module';
 import { ExamsModule } from './modules/exams/exams/exams.module';
 import { QuestionsModule } from './modules/exams/questions/questions.module';
 import { AnswersModule } from './modules/exams/answers/answers.module';
+import { AnnouncementsModule } from './modules/exams/announcements/announcements.module';
+import { AttemptsModule } from './modules/exams/attempts/attempts.module';
+import { TimeslotsModule } from './modules/exams/timeslots/timeslots.module';
 import { StorageModule } from './storage/storage.module';
 
 @Module({
@@ -33,6 +36,9 @@ import { StorageModule } from './storage/storage.module';
         ExamsModule,
         QuestionsModule,
         AnswersModule,
+        AnnouncementsModule,
+        AttemptsModule,
+        TimeslotsModule,
         StorageModule,
     ],
 })

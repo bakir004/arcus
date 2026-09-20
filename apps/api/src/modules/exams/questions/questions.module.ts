@@ -9,6 +9,6 @@ import { QuestionsService } from '@/modules/exams/questions/questions.service';
     imports: [DatabaseModule, AuthzModule],
     controllers: [QuestionsController],
     providers: [QuestionsService, QuestionsRepository],
-    exports: [QuestionsService],
+    exports: [QuestionsService, QuestionsRepository],
 })
 export class QuestionsModule {}

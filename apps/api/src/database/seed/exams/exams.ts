@@ -2,6 +2,8 @@ import { primaryCourseId } from '@/database/seed/courses/courses';
 import { ExamType, ExamVisibility } from '@/database/schemas/enums.schema';
 import type { exams } from '@/database/schemas/exams.schema';
 
+export const aspExamId = '00000000-0000-4000-8000-000000000103';
+
 export type ExamSeed = Omit<typeof exams.$inferInsert, 'createdById'>;
 
 export const examSeeds: ExamSeed[] = [
@@ -12,6 +14,16 @@ export const examSeeds: ExamSeed[] = [
         description: 'Diskretna Matematika',
         type: ExamType.Online,
         durationMinutes: 15,
+        maxAttempts: 1,
+        visibility: ExamVisibility.Published,
+    },
+    {
+        id: aspExamId,
+        courseId: '00000000-0000-4000-8000-000000000003',
+        title: 'ASP Online Exam',
+        description: 'Algorithms and Data Structures assessment',
+        type: ExamType.Online,
+        durationMinutes: 90,
         maxAttempts: 1,
         visibility: ExamVisibility.Published,
     },

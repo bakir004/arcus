@@ -9,6 +9,24 @@ import {
     courseRoles,
     courses,
 } from '@/database/schemas/courses.schema';
+import { AttemptStatus, CodingLanguage, ExamType, ExamVisibility, QuestionType } from '@/database/schemas/enums.schema';
+import {
+    examAnswers,
+    examCodingAnswers,
+    examCodingExecutions,
+    examEssayAnswers,
+    examItemGrades,
+    examItemStatements,
+    examItems,
+    examMultipleChoiceAnswerSelections,
+    examQuestionCodingConfigs,
+    examQuestionEssayConfigs,
+    examQuestionMultipleChoiceChoices,
+    examQuestions,
+} from '@/database/schemas';
+import { examAttempts } from '@/database/schemas/attempts.schema';
+import { examAnnouncements } from '@/database/schemas/announcements.schema';
+import { examTimeslotRegistrations, examTimeslots } from '@/database/schemas/timeslots.schema';
 import { exams } from '@/database/schemas/exams.schema';
 import { faculties } from '@/database/schemas/faculties.schema';
 import {
@@ -22,7 +40,7 @@ import {
     courseStudentRoleName,
     courseSeeds,
 } from '@/database/seed/courses/courses';
-import { examSeeds } from '@/database/seed/exams/exams';
+import { aspExamId, examSeeds } from '@/database/seed/exams/exams';
 import { facultySeeds } from '@/database/seed/faculties/faculties';
 import { professorEmail, studentEmail, userSeeds } from '@/database/seed/users/users';
 import { seedAspMaterials, seedDiskretnaMaterials } from '@/database/seed/courses/materials';
@@ -224,12 +242,166 @@ async function seedExams(createdById: string) {
     console.log(`Seeded ${examSeeds.length} exams`);
 }
 
+async function seedAspOnlineExam(professorId: string, users: Array<{ id: string; email: string }>) {
+    const students = users.filter((candidate) => candidate.email !== professorEmail).slice(0, 5);
+    if (students.length < 5) throw new Error('ASP exam seed requires at least five students');
+
+    const itemIds = [
+        '00000000-0000-4000-8000-000000000201',
+        '00000000-0000-4000-8000-000000000202',
+        '00000000-0000-4000-8000-000000000203',
+    ];
+    const questionIds = [
+        '00000000-0000-4000-8000-000000000301',
+        '00000000-0000-4000-8000-000000000302',
+        '00000000-0000-4000-8000-000000000303',
+    ];
+    const timeslotId = '00000000-0000-4000-8000-000000000401';
+
+    await db.transaction(async (transaction) => {
+        // Re-running the seed replaces this complete demonstration exam.
+        await transaction.delete(exams).where(eq(exams.id, aspExamId));
+        await transaction.insert(exams).values({
+            id: aspExamId,
+            courseId: '00000000-0000-4000-8000-000000000003',
+            createdById: professorId,
+            title: 'ASP Online Exam',
+            description: 'Algorithms and Data Structures assessment',
+            type: ExamType.Online,
+            durationMinutes: 90,
+            maxAttempts: 1,
+            visibility: ExamVisibility.Published,
+        });
+
+        await transaction.insert(examAnnouncements).values({
+            id: '00000000-0000-4000-8000-000000000501',
+            examId: aspExamId,
+            title: 'Exam instructions',
+            message: 'Complete all questions. The third question is intentionally unanswered by three seeded students.',
+        });
+        await transaction.insert(examTimeslots).values({
+            id: timeslotId,
+            examId: aspExamId,
+            location: 'A-101',
+            startsAt: new Date(Date.now() - 60 * 60 * 1000),
+            capacity: 5,
+        });
+
+        await transaction.insert(examItems).values([
+            { id: itemIds[0], examId: aspExamId, position: 1, label: 'Q1', maxPoints: '5' },
+            { id: itemIds[1], examId: aspExamId, position: 2, label: 'Q2', maxPoints: '10' },
+            { id: itemIds[2], examId: aspExamId, position: 3, label: 'Q3', maxPoints: '15' },
+        ]);
+        await transaction.insert(examItemStatements).values([
+            { examItemId: itemIds[0], prompt: 'Which data structure provides average O(1) lookup by key?' },
+            { examItemId: itemIds[1], prompt: 'Explain the invariant maintained by a binary search tree.' },
+            {
+                examItemId: itemIds[2],
+                prompt: 'Implement a function that finds the shortest path in a weighted graph.',
+            },
+        ]);
+        await transaction.insert(examQuestions).values([
+            { id: questionIds[0], examItemId: itemIds[0], type: QuestionType.MultipleChoice },
+            { id: questionIds[1], examItemId: itemIds[1], type: QuestionType.Essay },
+            { id: questionIds[2], examItemId: itemIds[2], type: QuestionType.Coding },
+        ]);
+        await transaction.insert(examQuestionMultipleChoiceChoices).values([
+            { questionId: questionIds[0], choiceText: 'Hash table', position: 0, isCorrect: true },
+            { questionId: questionIds[0], choiceText: 'Linked list', position: 1, isCorrect: false },
+            { questionId: questionIds[0], choiceText: 'Stack', position: 2, isCorrect: false },
+        ]);
+        await transaction.insert(examQuestionEssayConfigs).values({ questionId: questionIds[1] });
+        await transaction.insert(examQuestionCodingConfigs).values({
+            questionId: questionIds[2],
+            language: CodingLanguage.JavaScript,
+            mode: 'function',
+            initialCode: 'function shortestPath(graph, start, end) {\\n  // TODO\\n}',
+            solutionCode: 'function shortestPath(graph, start, end) {\\n  return dijkstra(graph, start, end);\\n}',
+        });
+
+        for (const [index, student] of students.entries()) {
+            await transaction
+                .insert(examTimeslotRegistrations)
+                .values({ examId: aspExamId, timeslotId, studentId: student.id });
+            const attemptId = `00000000-0000-4000-8000-000000000${601 + index}`;
+            await transaction.insert(examAttempts).values({
+                id: attemptId,
+                examId: aspExamId,
+                studentId: student.id,
+                createdById: professorId,
+                status: AttemptStatus.Graded,
+                startedAt: new Date(Date.now() - 50 * 60 * 1000),
+                submittedAt: new Date(Date.now() - 5 * 60 * 1000),
+                gradedAt: new Date(),
+                score: index < 3 ? '15' : index === 3 ? '25' : '30',
+            });
+
+            const answerIds = itemIds.map(
+                (_, itemIndex) => `00000000-0000-4000-8000-000000000${701 + index * 3 + itemIndex}`,
+            );
+            // Three students intentionally leave Q3 unanswered.
+            const answeredItems = index < 3 ? [0, 1] : [0, 1, 2];
+            for (const itemIndex of answeredItems) {
+                const answerId = answerIds[itemIndex];
+                const type = [QuestionType.MultipleChoice, QuestionType.Essay, QuestionType.Coding][itemIndex];
+                await transaction
+                    .insert(examAnswers)
+                    .values({ id: answerId, attemptId, examItemId: itemIds[itemIndex], type });
+                if (itemIndex === 0)
+                    await transaction.insert(examMultipleChoiceAnswerSelections).values({ answerId, selectedIndex: 0 });
+                if (itemIndex === 1)
+                    await transaction.insert(examEssayAnswers).values({
+                        answerId,
+                        text: 'The left subtree contains smaller values and the right subtree contains larger values.',
+                    });
+                if (itemIndex === 2) {
+                    await transaction.insert(examCodingAnswers).values({
+                        answerId,
+                        code: 'return dijkstra(graph, start, end);',
+                        language: CodingLanguage.JavaScript,
+                    });
+                    await transaction.insert(examCodingExecutions).values({
+                        id: `00000000-0000-4000-8000-000000000${901 + index}`,
+                        attemptId,
+                        examItemId: itemIds[2],
+                        jobId: `seed-asp-${index + 1}`,
+                        studentCode: 'return dijkstra(graph, start, end);',
+                        result: {
+                            mode: 'function',
+                            passed: index === 4,
+                            compile: { stdout: '', stderr: '', exitCode: 0, timedOut: false, passed: true },
+                            tests: [],
+                        },
+                    });
+                }
+            }
+
+            const points = index < 3 ? ['5', '10', '0'] : index === 3 ? ['5', '10', '10'] : ['5', '10', '15'];
+            for (const [itemIndex, pointsAwarded] of points.entries()) {
+                await transaction.insert(examItemGrades).values({
+                    attemptId,
+                    examItemId: itemIds[itemIndex],
+                    pointsAwarded,
+                    status: 'graded',
+                    feedback: pointsAwarded === '0' ? 'No answer submitted.' : 'Seeded grade.',
+                    gradedById: professorId,
+                    gradedAt: new Date(),
+                });
+            }
+        }
+    });
+    console.log(
+        'Seeded ASP online exam with five attempts, questions, answers, grades, announcement, and timeslot registrations',
+    );
+}
+
 async function seed() {
     const { professor, users } = await seedUsers();
     await seedFacultyAndCourses(professor.id, users);
     await seedAspMaterials(professor.id);
     await seedDiskretnaMaterials(professor.id);
     await seedExams(professor.id);
+    await seedAspOnlineExam(professor.id, users);
 }
 
 seed()

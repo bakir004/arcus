@@ -13,10 +13,14 @@ export const examAttempts = pgTable(
         studentId: text('student_id')
             .notNull()
             .references(() => user.id, { onDelete: 'cascade' }),
-        status: attemptStatusEnum('status').notNull().default(AttemptStatus.InProgress),
+        createdById: text('created_by_id')
+            .notNull()
+            .references(() => user.id, { onDelete: 'restrict' }),
+        status: attemptStatusEnum('status').notNull().default(AttemptStatus.Registered),
         score: numeric('score', { precision: 7, scale: 2 }),
-        startedAt: timestamp('started_at').defaultNow().notNull(),
+        startedAt: timestamp('started_at'),
         submittedAt: timestamp('submitted_at'),
+        gradedAt: timestamp('graded_at'),
         createdAt: timestamp('created_at').defaultNow().notNull(),
     },
     (t) => [index('exam_attempts_exam_id_idx').on(t.examId), index('exam_attempts_student_id_idx').on(t.studentId)],

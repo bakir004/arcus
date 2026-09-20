@@ -27,9 +27,12 @@ export const questionTypeEnum = pgEnum('question_type', QuestionType);
 export const QUESTION_TYPES = [...questionTypeEnum.enumValues];
 
 export enum AttemptStatus {
+    Registered = 'registered',
     InProgress = 'in_progress',
     Submitted = 'submitted',
     Graded = 'graded',
+    Absent = 'absent',
+    Withdrawn = 'withdrawn',
 }
 
 export const attemptStatusEnum = pgEnum('attempt_status', AttemptStatus);

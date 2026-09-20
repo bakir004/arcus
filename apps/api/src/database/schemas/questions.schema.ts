@@ -3,7 +3,6 @@ import {
     foreignKey,
     index,
     integer,
-    jsonb,
     pgTable,
     text,
     timestamp,
@@ -74,8 +73,6 @@ export const examQuestionCodingTestCases = pgTable(
         name: text('name'),
         code: text('code'),
         position: integer('position').notNull(),
-        expectedStdout: text('expected_stdout'),
-        slots: jsonb('slots').$type<Record<string, string>>(),
     },
     (t) => [
         index('exam_q_coding_cases_question_id_idx').on(t.questionId),
@@ -95,11 +92,9 @@ export const examQuestionCodingConfigs = pgTable('exam_question_coding_configs',
     language: codingLanguageEnum('language').notNull(),
     mode: text('mode'),
     initialCode: text('initial_code'),
-    professorCode: text('professor_code'),
+    solutionCode: text('solution_code'),
     studentCodeTemplate: text('student_code_template'),
     testCodeTemplate: text('test_code_template'),
-    templates: jsonb('templates').$type<{ studentCode?: string; testCode?: string }>(),
-    slots: jsonb('slots').$type<Record<string, string>>(),
 });
 
 export const examQuestionEssayConfigs = pgTable('exam_question_essay_configs', {

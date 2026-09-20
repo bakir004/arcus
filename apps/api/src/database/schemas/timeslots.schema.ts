@@ -3,6 +3,9 @@ import { sql } from 'drizzle-orm';
 import { user } from './auth.schema';
 import { exams } from './exams.schema';
 
+export const EXAM_LOCATIONS = ['A-101', 'A-102', 'B-201', 'C-301', 'Main hall'] as const;
+export type ExamLocation = (typeof EXAM_LOCATIONS)[number];
+
 export const examTimeslots = pgTable(
     'exam_timeslots',
     {
