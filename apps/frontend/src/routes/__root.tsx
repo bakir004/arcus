@@ -53,7 +53,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                         {pathname === '/login' ? children : <AppShell pathname={pathname}>{children}</AppShell>}
                         <Toaster
                             theme={isDark ? 'dark' : 'light'}
-                            toastOptions={{ classNames: { success: '[&_[data-icon]]:text-success' } }}
+                            toastOptions={{
+                                classNames: {
+                                    success: '[&_[data-icon]]:text-success',
+                                    error: '[&_[data-icon]]:text-destructive',
+                                },
+                            }}
                         />
                     </TooltipProvider>
                 </QueryClientProvider>

@@ -1,11 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { CourseRolesPage } from '@/features/courses/components/course-roles-page';
+import { CourseRolesPage } from '@/features/courses/roles/pages/course-roles-page';
 import { courseByCodeOptions } from '@/features/courses/api/get-course';
 import {
     courseMembersOptions,
     coursePermissionsOptions,
     courseRolesOptions,
-} from '@/features/courses/api/get-course-roles';
+} from '@/features/courses/roles/api/get-course-roles';
 import { queryClient } from '@/lib/query-client';
 
 export const Route = createFileRoute('/courses/$code/roles')({

@@ -3,7 +3,7 @@ import { Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useTheme } from '@/hooks/use-theme';
-import { highlightCode } from './prism';
+import { highlightCode } from '../lib/prism';
 
 export function CodeDialog({
     open,

@@ -8,7 +8,7 @@ import type { CourseMaterial, MaterialGroup } from '../api/get-course-materials'
 import { useMoveCourseMaterial } from '../api/move-course-material';
 import { useDeleteCourseMaterialGroup } from '../api/delete-course-material-group';
 import { toast } from 'sonner';
-import { title } from './material-utils';
+import { title } from '../lib/material-utils';
 import { MaterialRow } from './material-row';
 import { EditCourseMaterialGroupDialog } from './course-material-dialogs';
 import { DeleteCourseMaterialGroupDialog } from './delete-course-material-group-dialog';

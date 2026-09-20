@@ -20,7 +20,7 @@ import { useCreateCourseMaterial } from '../api/create-course-material';
 import { useCreateCourseMaterialGroup } from '../api/create-course-material-group';
 import { useUpdateCourseMaterialGroup } from '../api/update-course-material-group';
 import { useUpdateCourseMaterial } from '../api/update-course-material';
-import { isValidHttpUrl } from './material-utils';
+import { isValidHttpUrl } from '../lib/material-utils';
 
 export function CreateCourseMaterialGroupDialog({
     courseId,
@@ -349,7 +349,9 @@ export function EditCourseMaterialDialog({
                             onChange={(event) => setVisibility(event.target.checked)}
                             className="size-4 rounded border-input accent-primary"
                         />
-                        <Label className="mt-0.25" htmlFor={`edit-visibility-${material.id}`}>Visible to students</Label>
+                        <Label className="mt-0.25" htmlFor={`edit-visibility-${material.id}`}>
+                            Visible to students
+                        </Label>
                     </div>
                     <DialogFooter>
                         <Button type="submit" disabled={updateMaterial.isPending}>

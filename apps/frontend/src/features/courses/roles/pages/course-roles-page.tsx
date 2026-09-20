@@ -1,16 +1,28 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Group } from '@/components/common';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useDebounce } from '@/hooks/use-debounce';
-import { useGetCourseByCode } from '../api/get-course';
+import { CourseRoleMemberCards, getInitials } from '../components/course-role-member-cards';
+import { CourseRolePermissions } from '../components/course-role-permissions';
+import { useGetCourseByCode } from '../../api/get-course';
 import {
     useAssignCourseMemberRole,
     useCourseMembers,
@@ -21,15 +33,6 @@ import {
     useRenameCourseRole,
     useUpdateCourseRole,
 } from '../api/get-course-roles';
-
-function getInitials(name: string, email: string) {
-    const source = name.trim() || email.trim() || 'U';
-    return source
-        .split(/\s+/)
-        .slice(0, 2)
-        .map((part) => part[0]?.toUpperCase())
-        .join('');
-}
 
 function getRoleErrorMessage(error: unknown, action: 'create' | 'rename') {
     if (error && typeof error === 'object' && 'status' in error && error.status === 409) {
@@ -51,6 +54,7 @@ export function CourseRolesPage({ courseCode }: { courseCode: string }) {
     const [roleManagementOpen, setRoleManagementOpen] = useState(false);
     const [editingRoleId, setEditingRoleId] = useState<string | null>(null);
     const [editingRoleName, setEditingRoleName] = useState('');
+    const [roleToDelete, setRoleToDelete] = useState<string | null>(null);
     const [memberSearch, setMemberSearch] = useState('');
     const selectedRole = roles.find((role) => role.id === selectedRoleId);
     const isProtectedRole = ['professor', 'student'].includes(selectedRole?.name.toLowerCase() ?? '');
@@ -188,30 +192,7 @@ export function CourseRolesPage({ courseCode }: { courseCode: string }) {
                 <p className="mt-1 text-sm text-muted-foreground">Manage roles, permissions, and enrolled users.</p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {nonStudentMembers.map((member) => (
-                    <div
-                        key={member.id}
-                        className="flex min-w-0 items-center gap-3 rounded-lg border bg-card p-3 shadow-sm"
-                    >
-                        <Avatar className="size-9 shrink-0">
-                            <AvatarImage
-                                src={member.image ?? undefined}
-                                alt={member.name}
-                                referrerPolicy="no-referrer"
-                            />
-                            <AvatarFallback>{getInitials(member.name, member.email)}</AvatarFallback>
-                        </Avatar>
-                        <div className="min-w-0">
-                            <p className="truncate text-sm font-medium">{member.name}</p>
-                            <p className="truncate text-xs text-muted-foreground">{member.email}</p>
-                            <p className="truncate text-xs text-muted-foreground">
-                                {member.roles.map((role) => role.name).join(', ') || 'No role'}
-                            </p>
-                        </div>
-                    </div>
-                ))}
-            </div>
+            <CourseRoleMemberCards members={nonStudentMembers} />
 
             <section className="rounded-xl border bg-card p-6 shadow-sm">
                 <Group className="items-end justify-between gap-4" wrap>
@@ -258,7 +239,7 @@ export function CourseRolesPage({ courseCode }: { courseCode: string }) {
                                                 variant="ghost"
                                                 className="text-destructive"
                                                 disabled={hasAssignedUsers || deleteRole.isPending}
-                                                onClick={() => void removeRole(role.id)}
+                                                onClick={() => setRoleToDelete(role.id)}
                                             >
                                                 Delete
                                             </Button>
@@ -308,6 +289,20 @@ export function CourseRolesPage({ courseCode }: { courseCode: string }) {
                                                         <Button type="submit" size="sm" disabled={renameRole.isPending}>
                                                             Save
                                                         </Button>
+                                                        <Button
+                                                            type="button"
+                                                            size="icon-sm"
+                                                            variant="outline"
+                                                            aria-label="Cancel renaming"
+                                                            title="Cancel renaming"
+                                                            disabled={renameRole.isPending}
+                                                            onClick={() => {
+                                                                setEditingRoleId(null);
+                                                                setEditingRoleName('');
+                                                            }}
+                                                        >
+                                                            <X />
+                                                        </Button>
                                                     </form>
                                                 ) : null}
                                             </div>
@@ -340,6 +335,38 @@ export function CourseRolesPage({ courseCode }: { courseCode: string }) {
                             </div>
                         </PopoverContent>
                     </Popover>
+                    <AlertDialog
+                        open={roleToDelete !== null}
+                        onOpenChange={(open) => {
+                            if (!open && !deleteRole.isPending) setRoleToDelete(null);
+                        }}
+                    >
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Delete role?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This will permanently delete the role “
+                                    {roles.find((role) => role.id === roleToDelete)?.name}”. Roles with assigned users
+                                    cannot be deleted.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel disabled={deleteRole.isPending}>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                    variant="destructive"
+                                    disabled={deleteRole.isPending}
+                                    onClick={() => {
+                                        if (!roleToDelete) return;
+                                        const deletingRoleId = roleToDelete;
+                                        setRoleToDelete(null);
+                                        void removeRole(deletingRoleId);
+                                    }}
+                                >
+                                    Delete role
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                     <Popover open={manageRolesOpen} onOpenChange={setManageRolesOpen}>
                         <PopoverTrigger asChild>
                             <Button type="button" variant="secondary">
@@ -415,54 +442,15 @@ export function CourseRolesPage({ courseCode }: { courseCode: string }) {
                     </Popover>
                 </Group>
 
-                <div className="mt-6 border-t pt-6">
-                    <Group className="mb-4 items-center justify-between">
-                        <div>
-                            <h2 className="font-medium">Permissions{selectedRole ? ` · ${selectedRole.name}` : ''}</h2>
-                            <p className="text-sm text-muted-foreground">
-                                {isProtectedRole
-                                    ? 'This built-in role has read-only permissions.'
-                                    : 'Choose what this role can do in the course.'}
-                            </p>
-                        </div>
-                    </Group>
-                    <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                        {Object.entries(permissionGroups).map(([group, groupPermissions]) => {
-                            const allGroupSelected = groupPermissions.every((permission) =>
-                                selectedPermissions.includes(permission),
-                            );
-                            return (
-                                <div key={group} className="space-y-2">
-                                    <label className="flex cursor-pointer items-center gap-2 text-sm font-medium capitalize">
-                                        <input
-                                            type="checkbox"
-                                            checked={allGroupSelected}
-                                            onChange={() => togglePermissionGroup(groupPermissions)}
-                                            disabled={!selectedRole || isProtectedRole || updateRole.isPending}
-                                            className="size-4 accent-primary"
-                                        />
-                                        <span>{group}</span>
-                                    </label>
-                                    {groupPermissions.map((permission) => (
-                                        <label
-                                            key={permission}
-                                            className="flex cursor-pointer items-center gap-2 pl-5 text-sm"
-                                        >
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedPermissions.includes(permission)}
-                                                onChange={() => void togglePermission(permission)}
-                                                disabled={!selectedRole || isProtectedRole || updateRole.isPending}
-                                                className="size-4 accent-primary"
-                                            />
-                                            <span>{permission}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
+                <CourseRolePermissions
+                    role={selectedRole}
+                    permissionGroups={permissionGroups}
+                    selectedPermissions={selectedPermissions}
+                    protectedRole={isProtectedRole}
+                    pending={updateRole.isPending}
+                    onToggle={togglePermission}
+                    onToggleGroup={togglePermissionGroup}
+                />
             </section>
         </div>
     );

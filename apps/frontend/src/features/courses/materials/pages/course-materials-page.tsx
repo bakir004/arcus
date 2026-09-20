@@ -7,14 +7,14 @@ import { toast } from 'sonner';
 import { Box } from '@/components/common';
 import { Badge } from '@/components/ui/badge';
 import { useGetCourseMaterials } from '../api/get-course-materials';
-import { useGetCourseByCode } from '../api/get-course';
-import { useGetCourseMe } from '../api/get-course-me';
+import { useGetCourseByCode } from '../../api/get-course';
+import { useGetCourseMe } from '../../api/get-course-me';
 import { useMoveCourseMaterialGroup } from '../api/move-course-material-group';
 import { isProfessorRole } from '@/features/auth/lib/roles';
 import { useDebounce } from '@/hooks/use-debounce';
-import { SortableGroupCard } from './material-group';
-import { CreateCourseMaterialDialog, CreateCourseMaterialGroupDialog } from './course-material-dialogs';
-import { fuzzyMatch, groupAnchor, scrollToGroup, title } from './material-utils';
+import { SortableGroupCard } from '../components/material-group';
+import { CreateCourseMaterialDialog, CreateCourseMaterialGroupDialog } from '../components/course-material-dialogs';
+import { fuzzyMatch, groupAnchor, scrollToGroup, title } from '../lib/material-utils';
 
 export function CourseMaterialsPage() {
     const { code: routeCode } = useParams({ strict: false });

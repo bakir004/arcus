@@ -18,13 +18,28 @@ import { getCourseMaterialUrlRequest, type CourseMaterial, type MaterialGroup } 
 import { useDeleteCourseMaterial } from '../api/delete-course-material';
 import { useMoveCourseMaterial } from '../api/move-course-material';
 import { useUpdateCourseMaterial } from '../api/update-course-material';
-import { bytes, extension, isPlatformLink, language, materialAppearance, previewable, title } from './material-utils';
+import {
+    bytes,
+    extension,
+    isPlatformLink,
+    language,
+    materialAppearance,
+    previewable,
+    title,
+} from '../lib/material-utils';
 import { CodeDialog } from './code-dialog';
 import { DeleteCourseMaterialDialog } from './delete-course-material-dialog';
 import { EditCourseMaterialDialog } from './course-material-dialogs';
-import { highlightCode } from './prism';
+import { highlightCode } from '../lib/prism';
 
 const markdownComponents: Components = {
+    a({ href, children, ...props }) {
+        return (
+            <a href={href} {...props} target="_blank" rel="noopener noreferrer">
+                {children}
+            </a>
+        );
+    },
     code({ className, children }) {
         const language = /language-([\w-]+)/.exec(className ?? '')?.[1];
         if (!language)

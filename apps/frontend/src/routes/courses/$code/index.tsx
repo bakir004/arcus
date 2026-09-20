@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { CourseMaterialsPage } from '@/features/courses/components/course-materials-page';
+import { CourseMaterialsPage } from '@/features/courses/materials/pages/course-materials-page';
 import { courseMeOptions } from '@/features/courses/api/get-course-me';
-import { courseMaterialsOptions } from '@/features/courses/api/get-course-materials';
+import { courseMaterialsOptions } from '@/features/courses/materials/api/get-course-materials';
 import { courseByCodeOptions } from '@/features/courses/api/get-course';
 import { queryClient } from '@/lib/query-client';
 
