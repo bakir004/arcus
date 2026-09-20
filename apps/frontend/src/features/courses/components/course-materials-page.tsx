@@ -5,6 +5,7 @@ import { useParams } from '@tanstack/react-router';
 import { Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { Box } from '@/components/common';
+import { Badge } from '@/components/ui/badge';
 import { useGetCourseMaterials } from '../api/get-course-materials';
 import { useGetCourseByCode } from '../api/get-course';
 import { useGetCourseMe } from '../api/get-course-me';
@@ -96,6 +97,10 @@ export function CourseMaterialsPage() {
     return (
         <Box as="main" id="top" className="mx-auto flex w-full max-w-7xl gap-8 px-6 py-10">
             <Box className="min-w-0 flex-1">
+                <div className="mb-8 flex flex-wrap items-center gap-3">
+                    <Badge variant="secondary">{course.code ?? code}</Badge>
+                    <h1 className="text-3xl font-semibold tracking-tight">{course.name}</h1>
+                </div>
                 <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                     <div className="relative w-full max-w-md">
                         <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

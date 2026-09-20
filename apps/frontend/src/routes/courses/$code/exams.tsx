@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { CoursePlaceholderPage } from '@/features/courses/components/course-placeholder-page';
+import { CourseExamsPage } from '@/features/courses/components/course-exams-page';
 
 export const Route = createFileRoute('/courses/$code/exams')({
-    component: () => <CoursePlaceholderPage title="Exams" />,
+    component: CourseExamsPage,
 });
