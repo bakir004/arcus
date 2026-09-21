@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import ReactMarkdown, { type Components } from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { ArrowUpDown, Download, Eye, EyeOff, ExternalLink, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -13,7 +11,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useTheme } from '@/hooks/use-theme';
+import { Markdown } from '@/components/common';
 import { getCourseMaterialUrlRequest, type CourseMaterial, type MaterialGroup } from '../api/get-course-materials';
 import { useDeleteCourseMaterial } from '../api/delete-course-material';
 import { useMoveCourseMaterial } from '../api/move-course-material';
@@ -30,31 +28,6 @@ import {
 import { CodeDialog } from './code-dialog';
 import { DeleteCourseMaterialDialog } from './delete-course-material-dialog';
 import { EditCourseMaterialDialog } from './course-material-dialogs';
-import { highlightCode } from '../lib/prism';
-
-const markdownComponents: Components = {
-    a({ href, children, ...props }) {
-        return (
-            <a href={href} {...props} target="_blank" rel="noopener noreferrer">
-                {children}
-            </a>
-        );
-    },
-    code({ className, children }) {
-        const language = /language-([\w-]+)/.exec(className ?? '')?.[1];
-        if (!language)
-            return <code className={`${className ?? ''} before:content-none after:content-none`}>{children}</code>;
-
-        const code = String(children).replace(/\n$/, '');
-        const highlighted = highlightCode(code, language);
-        return (
-            <code
-                className={`language-${language} before:content-none after:content-none`} // biome-ignore lint/security/noDangerouslySetInnerHtml: Prism escapes source code before adding syntax markup.
-                dangerouslySetInnerHTML={{ __html: highlighted }}
-            />
-        );
-    },
-};
 
 export function MaterialRow({
     courseId,
@@ -70,7 +43,6 @@ export function MaterialRow({
     canManage: boolean;
 }) {
     const { Icon, color: iconColor } = materialAppearance(material);
-    const { isDark } = useTheme();
     const [dialog, setDialog] = useState(false);
     const [code, setCode] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
@@ -127,11 +99,9 @@ export function MaterialRow({
                 <div className="flex items-start gap-2 px-5 py-5">
                     {dragHandle}
                     <div
-                        className={`markdown-preview prose prose-sm dark:prose-invert min-w-0 max-w-none flex-1 overflow-x-auto break-words ${isDark ? '' : 'prism-theme-light'}`}
+                        className="min-w-0 flex-1"
                     >
-                        <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                            {material.textContent}
-                        </ReactMarkdown>
+                        <Markdown>{material.textContent}</Markdown>
                     </div>
                     {canManage && (
                         <TooltipProvider>

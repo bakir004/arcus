@@ -44,4 +44,6 @@ function Badge({
   )
 }
 
+export function BadgePart({ className, variant: _variant, ...props }: React.ComponentProps<'span'> & { variant?: string }) { return <span className={className} {...props} /> }
+
 export { Badge, badgeVariants }

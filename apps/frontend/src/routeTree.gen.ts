@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as CoursesCodeRouteImport } from './routes/courses/$code'
+import { Route as ExamsExamIdRouteImport } from './routes/exams/$examId'
 import { Route as CoursesCodeIndexRouteImport } from './routes/courses/$code/index'
 import { Route as CoursesCodeAdminRouteImport } from './routes/courses/$code/admin'
 import { Route as CoursesCodeAnalyticsRouteImport } from './routes/courses/$code/analytics'
@@ -23,6 +24,14 @@ import { Route as CoursesCodeMaterialsRouteImport } from './routes/courses/$code
 import { Route as CoursesCodeReviewRouteImport } from './routes/courses/$code/review'
 import { Route as CoursesCodeRolesRouteImport } from './routes/courses/$code/roles'
 import { Route as CoursesCodeSettingsRouteImport } from './routes/courses/$code/settings'
+import { Route as ExamsExamIdIndexRouteImport } from './routes/exams/$examId/index'
+import { Route as ExamsExamIdStartRouteImport } from './routes/exams/$examId/start'
+import { Route as GradingExamsExamIdRouteImport } from './routes/grading/exams/$examId'
+import { Route as ExamsExamIdAttemptsAttemptIdRouteImport } from './routes/exams/$examId/attempts/$attemptId'
+import { Route as CoursesCodeExamsExamIdEditRouteImport } from './routes/courses/$code/exams/$examId/edit'
+import { Route as ExamsExamIdAttemptsAttemptIdIndexRouteImport } from './routes/exams/$examId/attempts/$attemptId/index'
+import { Route as ExamsExamIdAttemptsAttemptIdQuestionsIndexRouteImport } from './routes/exams/$examId/attempts/$attemptId/questions/index'
+import { Route as ExamsExamIdAttemptsAttemptIdQuestionsQuestionPositionRouteImport } from './routes/exams/$examId/attempts/$attemptId/questions/$questionPosition'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -37,6 +46,11 @@ const LoginRoute = LoginRouteImport.update({
 const CoursesCodeRoute = CoursesCodeRouteImport.update({
   id: '/courses/$code',
   path: '/courses/$code',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExamsExamIdRoute = ExamsExamIdRouteImport.update({
+  id: '/exams/$examId',
+  path: '/exams/$examId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CoursesCodeIndexRoute = CoursesCodeIndexRouteImport.update({
@@ -94,22 +108,76 @@ const CoursesCodeSettingsRoute = CoursesCodeSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => CoursesCodeRoute,
 } as any)
+const ExamsExamIdIndexRoute = ExamsExamIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ExamsExamIdRoute,
+} as any)
+const ExamsExamIdStartRoute = ExamsExamIdStartRouteImport.update({
+  id: '/start',
+  path: '/start',
+  getParentRoute: () => ExamsExamIdRoute,
+} as any)
+const GradingExamsExamIdRoute = GradingExamsExamIdRouteImport.update({
+  id: '/grading/exams/$examId',
+  path: '/grading/exams/$examId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExamsExamIdAttemptsAttemptIdRoute =
+  ExamsExamIdAttemptsAttemptIdRouteImport.update({
+    id: '/attempts/$attemptId',
+    path: '/attempts/$attemptId',
+    getParentRoute: () => ExamsExamIdRoute,
+  } as any)
+const CoursesCodeExamsExamIdEditRoute =
+  CoursesCodeExamsExamIdEditRouteImport.update({
+    id: '/$examId/edit',
+    path: '/$examId/edit',
+    getParentRoute: () => CoursesCodeExamsRoute,
+  } as any)
+const ExamsExamIdAttemptsAttemptIdIndexRoute =
+  ExamsExamIdAttemptsAttemptIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => ExamsExamIdAttemptsAttemptIdRoute,
+  } as any)
+const ExamsExamIdAttemptsAttemptIdQuestionsIndexRoute =
+  ExamsExamIdAttemptsAttemptIdQuestionsIndexRouteImport.update({
+    id: '/questions/',
+    path: '/questions/',
+    getParentRoute: () => ExamsExamIdAttemptsAttemptIdRoute,
+  } as any)
+const ExamsExamIdAttemptsAttemptIdQuestionsQuestionPositionRoute =
+  ExamsExamIdAttemptsAttemptIdQuestionsQuestionPositionRouteImport.update({
+    id: '/questions/$questionPosition',
+    path: '/questions/$questionPosition',
+    getParentRoute: () => ExamsExamIdAttemptsAttemptIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/courses/$code': typeof CoursesCodeRouteWithChildren
+  '/exams/$examId': typeof ExamsExamIdRouteWithChildren
   '/courses/$code/admin': typeof CoursesCodeAdminRoute
   '/courses/$code/analytics': typeof CoursesCodeAnalyticsRoute
   '/courses/$code/assignments': typeof CoursesCodeAssignmentsRoute
-  '/courses/$code/exams': typeof CoursesCodeExamsRoute
+  '/courses/$code/exams': typeof CoursesCodeExamsRouteWithChildren
   '/courses/$code/gradebook': typeof CoursesCodeGradebookRoute
   '/courses/$code/grades': typeof CoursesCodeGradesRoute
   '/courses/$code/materials': typeof CoursesCodeMaterialsRoute
   '/courses/$code/review': typeof CoursesCodeReviewRoute
   '/courses/$code/roles': typeof CoursesCodeRolesRoute
   '/courses/$code/settings': typeof CoursesCodeSettingsRoute
+  '/exams/$examId/start': typeof ExamsExamIdStartRoute
+  '/grading/exams/$examId': typeof GradingExamsExamIdRoute
   '/courses/$code/': typeof CoursesCodeIndexRoute
+  '/exams/$examId/': typeof ExamsExamIdIndexRoute
+  '/exams/$examId/attempts/$attemptId': typeof ExamsExamIdAttemptsAttemptIdRouteWithChildren
+  '/courses/$code/exams/$examId/edit': typeof CoursesCodeExamsExamIdEditRoute
+  '/exams/$examId/attempts/$attemptId/': typeof ExamsExamIdAttemptsAttemptIdIndexRoute
+  '/exams/$examId/attempts/$attemptId/questions/$questionPosition': typeof ExamsExamIdAttemptsAttemptIdQuestionsQuestionPositionRoute
+  '/exams/$examId/attempts/$attemptId/questions/': typeof ExamsExamIdAttemptsAttemptIdQuestionsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -117,31 +185,47 @@ export interface FileRoutesByTo {
   '/courses/$code/admin': typeof CoursesCodeAdminRoute
   '/courses/$code/analytics': typeof CoursesCodeAnalyticsRoute
   '/courses/$code/assignments': typeof CoursesCodeAssignmentsRoute
-  '/courses/$code/exams': typeof CoursesCodeExamsRoute
+  '/courses/$code/exams': typeof CoursesCodeExamsRouteWithChildren
   '/courses/$code/gradebook': typeof CoursesCodeGradebookRoute
   '/courses/$code/grades': typeof CoursesCodeGradesRoute
   '/courses/$code/materials': typeof CoursesCodeMaterialsRoute
   '/courses/$code/review': typeof CoursesCodeReviewRoute
   '/courses/$code/roles': typeof CoursesCodeRolesRoute
   '/courses/$code/settings': typeof CoursesCodeSettingsRoute
+  '/exams/$examId/start': typeof ExamsExamIdStartRoute
+  '/grading/exams/$examId': typeof GradingExamsExamIdRoute
   '/courses/$code': typeof CoursesCodeIndexRoute
+  '/exams/$examId': typeof ExamsExamIdIndexRoute
+  '/courses/$code/exams/$examId/edit': typeof CoursesCodeExamsExamIdEditRoute
+  '/exams/$examId/attempts/$attemptId': typeof ExamsExamIdAttemptsAttemptIdIndexRoute
+  '/exams/$examId/attempts/$attemptId/questions/$questionPosition': typeof ExamsExamIdAttemptsAttemptIdQuestionsQuestionPositionRoute
+  '/exams/$examId/attempts/$attemptId/questions': typeof ExamsExamIdAttemptsAttemptIdQuestionsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/courses/$code': typeof CoursesCodeRouteWithChildren
+  '/exams/$examId': typeof ExamsExamIdRouteWithChildren
   '/courses/$code/admin': typeof CoursesCodeAdminRoute
   '/courses/$code/analytics': typeof CoursesCodeAnalyticsRoute
   '/courses/$code/assignments': typeof CoursesCodeAssignmentsRoute
-  '/courses/$code/exams': typeof CoursesCodeExamsRoute
+  '/courses/$code/exams': typeof CoursesCodeExamsRouteWithChildren
   '/courses/$code/gradebook': typeof CoursesCodeGradebookRoute
   '/courses/$code/grades': typeof CoursesCodeGradesRoute
   '/courses/$code/materials': typeof CoursesCodeMaterialsRoute
   '/courses/$code/review': typeof CoursesCodeReviewRoute
   '/courses/$code/roles': typeof CoursesCodeRolesRoute
   '/courses/$code/settings': typeof CoursesCodeSettingsRoute
+  '/exams/$examId/start': typeof ExamsExamIdStartRoute
+  '/grading/exams/$examId': typeof GradingExamsExamIdRoute
   '/courses/$code/': typeof CoursesCodeIndexRoute
+  '/exams/$examId/': typeof ExamsExamIdIndexRoute
+  '/exams/$examId/attempts/$attemptId': typeof ExamsExamIdAttemptsAttemptIdRouteWithChildren
+  '/courses/$code/exams/$examId/edit': typeof CoursesCodeExamsExamIdEditRoute
+  '/exams/$examId/attempts/$attemptId/': typeof ExamsExamIdAttemptsAttemptIdIndexRoute
+  '/exams/$examId/attempts/$attemptId/questions/$questionPosition': typeof ExamsExamIdAttemptsAttemptIdQuestionsQuestionPositionRoute
+  '/exams/$examId/attempts/$attemptId/questions/': typeof ExamsExamIdAttemptsAttemptIdQuestionsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -149,6 +233,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/courses/$code'
+    | '/exams/$examId'
     | '/courses/$code/admin'
     | '/courses/$code/analytics'
     | '/courses/$code/assignments'
@@ -159,7 +244,15 @@ export interface FileRouteTypes {
     | '/courses/$code/review'
     | '/courses/$code/roles'
     | '/courses/$code/settings'
+    | '/exams/$examId/start'
+    | '/grading/exams/$examId'
     | '/courses/$code/'
+    | '/exams/$examId/'
+    | '/exams/$examId/attempts/$attemptId'
+    | '/courses/$code/exams/$examId/edit'
+    | '/exams/$examId/attempts/$attemptId/'
+    | '/exams/$examId/attempts/$attemptId/questions/$questionPosition'
+    | '/exams/$examId/attempts/$attemptId/questions/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -174,12 +267,20 @@ export interface FileRouteTypes {
     | '/courses/$code/review'
     | '/courses/$code/roles'
     | '/courses/$code/settings'
+    | '/exams/$examId/start'
+    | '/grading/exams/$examId'
     | '/courses/$code'
+    | '/exams/$examId'
+    | '/courses/$code/exams/$examId/edit'
+    | '/exams/$examId/attempts/$attemptId'
+    | '/exams/$examId/attempts/$attemptId/questions/$questionPosition'
+    | '/exams/$examId/attempts/$attemptId/questions'
   id:
     | '__root__'
     | '/'
     | '/login'
     | '/courses/$code'
+    | '/exams/$examId'
     | '/courses/$code/admin'
     | '/courses/$code/analytics'
     | '/courses/$code/assignments'
@@ -190,13 +291,23 @@ export interface FileRouteTypes {
     | '/courses/$code/review'
     | '/courses/$code/roles'
     | '/courses/$code/settings'
+    | '/exams/$examId/start'
+    | '/grading/exams/$examId'
     | '/courses/$code/'
+    | '/exams/$examId/'
+    | '/exams/$examId/attempts/$attemptId'
+    | '/courses/$code/exams/$examId/edit'
+    | '/exams/$examId/attempts/$attemptId/'
+    | '/exams/$examId/attempts/$attemptId/questions/$questionPosition'
+    | '/exams/$examId/attempts/$attemptId/questions/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
   CoursesCodeRoute: typeof CoursesCodeRouteWithChildren
+  ExamsExamIdRoute: typeof ExamsExamIdRouteWithChildren
+  GradingExamsExamIdRoute: typeof GradingExamsExamIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -220,6 +331,13 @@ declare module '@tanstack/react-router' {
       path: '/courses/$code'
       fullPath: '/courses/$code'
       preLoaderRoute: typeof CoursesCodeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/exams/$examId': {
+      id: '/exams/$examId'
+      path: '/exams/$examId'
+      fullPath: '/exams/$examId'
+      preLoaderRoute: typeof ExamsExamIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/courses/$code/': {
@@ -299,14 +417,81 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CoursesCodeSettingsRouteImport
       parentRoute: typeof CoursesCodeRoute
     }
+    '/exams/$examId/': {
+      id: '/exams/$examId/'
+      path: '/'
+      fullPath: '/exams/$examId/'
+      preLoaderRoute: typeof ExamsExamIdIndexRouteImport
+      parentRoute: typeof ExamsExamIdRoute
+    }
+    '/exams/$examId/start': {
+      id: '/exams/$examId/start'
+      path: '/start'
+      fullPath: '/exams/$examId/start'
+      preLoaderRoute: typeof ExamsExamIdStartRouteImport
+      parentRoute: typeof ExamsExamIdRoute
+    }
+    '/grading/exams/$examId': {
+      id: '/grading/exams/$examId'
+      path: '/grading/exams/$examId'
+      fullPath: '/grading/exams/$examId'
+      preLoaderRoute: typeof GradingExamsExamIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/exams/$examId/attempts/$attemptId': {
+      id: '/exams/$examId/attempts/$attemptId'
+      path: '/attempts/$attemptId'
+      fullPath: '/exams/$examId/attempts/$attemptId'
+      preLoaderRoute: typeof ExamsExamIdAttemptsAttemptIdRouteImport
+      parentRoute: typeof ExamsExamIdRoute
+    }
+    '/courses/$code/exams/$examId/edit': {
+      id: '/courses/$code/exams/$examId/edit'
+      path: '/$examId/edit'
+      fullPath: '/courses/$code/exams/$examId/edit'
+      preLoaderRoute: typeof CoursesCodeExamsExamIdEditRouteImport
+      parentRoute: typeof CoursesCodeExamsRoute
+    }
+    '/exams/$examId/attempts/$attemptId/': {
+      id: '/exams/$examId/attempts/$attemptId/'
+      path: '/'
+      fullPath: '/exams/$examId/attempts/$attemptId/'
+      preLoaderRoute: typeof ExamsExamIdAttemptsAttemptIdIndexRouteImport
+      parentRoute: typeof ExamsExamIdAttemptsAttemptIdRoute
+    }
+    '/exams/$examId/attempts/$attemptId/questions/': {
+      id: '/exams/$examId/attempts/$attemptId/questions/'
+      path: '/questions'
+      fullPath: '/exams/$examId/attempts/$attemptId/questions/'
+      preLoaderRoute: typeof ExamsExamIdAttemptsAttemptIdQuestionsIndexRouteImport
+      parentRoute: typeof ExamsExamIdAttemptsAttemptIdRoute
+    }
+    '/exams/$examId/attempts/$attemptId/questions/$questionPosition': {
+      id: '/exams/$examId/attempts/$attemptId/questions/$questionPosition'
+      path: '/questions/$questionPosition'
+      fullPath: '/exams/$examId/attempts/$attemptId/questions/$questionPosition'
+      preLoaderRoute: typeof ExamsExamIdAttemptsAttemptIdQuestionsQuestionPositionRouteImport
+      parentRoute: typeof ExamsExamIdAttemptsAttemptIdRoute
+    }
   }
 }
+
+interface CoursesCodeExamsRouteChildren {
+  CoursesCodeExamsExamIdEditRoute: typeof CoursesCodeExamsExamIdEditRoute
+}
+
+const CoursesCodeExamsRouteChildren: CoursesCodeExamsRouteChildren = {
+  CoursesCodeExamsExamIdEditRoute: CoursesCodeExamsExamIdEditRoute,
+}
+
+const CoursesCodeExamsRouteWithChildren =
+  CoursesCodeExamsRoute._addFileChildren(CoursesCodeExamsRouteChildren)
 
 interface CoursesCodeRouteChildren {
   CoursesCodeAdminRoute: typeof CoursesCodeAdminRoute
   CoursesCodeAnalyticsRoute: typeof CoursesCodeAnalyticsRoute
   CoursesCodeAssignmentsRoute: typeof CoursesCodeAssignmentsRoute
-  CoursesCodeExamsRoute: typeof CoursesCodeExamsRoute
+  CoursesCodeExamsRoute: typeof CoursesCodeExamsRouteWithChildren
   CoursesCodeGradebookRoute: typeof CoursesCodeGradebookRoute
   CoursesCodeGradesRoute: typeof CoursesCodeGradesRoute
   CoursesCodeMaterialsRoute: typeof CoursesCodeMaterialsRoute
@@ -320,7 +505,7 @@ const CoursesCodeRouteChildren: CoursesCodeRouteChildren = {
   CoursesCodeAdminRoute: CoursesCodeAdminRoute,
   CoursesCodeAnalyticsRoute: CoursesCodeAnalyticsRoute,
   CoursesCodeAssignmentsRoute: CoursesCodeAssignmentsRoute,
-  CoursesCodeExamsRoute: CoursesCodeExamsRoute,
+  CoursesCodeExamsRoute: CoursesCodeExamsRouteWithChildren,
   CoursesCodeGradebookRoute: CoursesCodeGradebookRoute,
   CoursesCodeGradesRoute: CoursesCodeGradesRoute,
   CoursesCodeMaterialsRoute: CoursesCodeMaterialsRoute,
@@ -334,10 +519,50 @@ const CoursesCodeRouteWithChildren = CoursesCodeRoute._addFileChildren(
   CoursesCodeRouteChildren,
 )
 
+interface ExamsExamIdAttemptsAttemptIdRouteChildren {
+  ExamsExamIdAttemptsAttemptIdIndexRoute: typeof ExamsExamIdAttemptsAttemptIdIndexRoute
+  ExamsExamIdAttemptsAttemptIdQuestionsQuestionPositionRoute: typeof ExamsExamIdAttemptsAttemptIdQuestionsQuestionPositionRoute
+  ExamsExamIdAttemptsAttemptIdQuestionsIndexRoute: typeof ExamsExamIdAttemptsAttemptIdQuestionsIndexRoute
+}
+
+const ExamsExamIdAttemptsAttemptIdRouteChildren: ExamsExamIdAttemptsAttemptIdRouteChildren =
+  {
+    ExamsExamIdAttemptsAttemptIdIndexRoute:
+      ExamsExamIdAttemptsAttemptIdIndexRoute,
+    ExamsExamIdAttemptsAttemptIdQuestionsQuestionPositionRoute:
+      ExamsExamIdAttemptsAttemptIdQuestionsQuestionPositionRoute,
+    ExamsExamIdAttemptsAttemptIdQuestionsIndexRoute:
+      ExamsExamIdAttemptsAttemptIdQuestionsIndexRoute,
+  }
+
+const ExamsExamIdAttemptsAttemptIdRouteWithChildren =
+  ExamsExamIdAttemptsAttemptIdRoute._addFileChildren(
+    ExamsExamIdAttemptsAttemptIdRouteChildren,
+  )
+
+interface ExamsExamIdRouteChildren {
+  ExamsExamIdStartRoute: typeof ExamsExamIdStartRoute
+  ExamsExamIdIndexRoute: typeof ExamsExamIdIndexRoute
+  ExamsExamIdAttemptsAttemptIdRoute: typeof ExamsExamIdAttemptsAttemptIdRouteWithChildren
+}
+
+const ExamsExamIdRouteChildren: ExamsExamIdRouteChildren = {
+  ExamsExamIdStartRoute: ExamsExamIdStartRoute,
+  ExamsExamIdIndexRoute: ExamsExamIdIndexRoute,
+  ExamsExamIdAttemptsAttemptIdRoute:
+    ExamsExamIdAttemptsAttemptIdRouteWithChildren,
+}
+
+const ExamsExamIdRouteWithChildren = ExamsExamIdRoute._addFileChildren(
+  ExamsExamIdRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
   CoursesCodeRoute: CoursesCodeRouteWithChildren,
+  ExamsExamIdRoute: ExamsExamIdRouteWithChildren,
+  GradingExamsExamIdRoute: GradingExamsExamIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

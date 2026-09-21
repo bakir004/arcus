@@ -1,56 +1,56 @@
-import * as React from 'react';
-import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '@/lib/utils';
+import * as React from "react"
+import { cva, type VariantProps } from "class-variance-authority"
+import { cn } from "@/lib/utils"
 
-type Gap = number | string;
+type Gap = number | string
 
-const flexVariants = cva('flex', {
+const flexVariants = cva("flex", {
     variants: {
         direction: {
-            row: 'flex-row',
-            column: 'flex-col',
-            'row-reverse': 'flex-row-reverse',
-            'column-reverse': 'flex-col-reverse',
+            row: "flex-row",
+            column: "flex-col",
+            "row-reverse": "flex-row-reverse",
+            "column-reverse": "flex-col-reverse",
         },
         align: {
-            start: 'items-start',
-            center: 'items-center',
-            end: 'items-end',
-            stretch: 'items-stretch',
-            baseline: 'items-baseline',
+            start: "items-start",
+            center: "items-center",
+            end: "items-end",
+            stretch: "items-stretch",
+            baseline: "items-baseline",
         },
         justify: {
-            start: 'justify-start',
-            center: 'justify-center',
-            end: 'justify-end',
-            between: 'justify-between',
-            around: 'justify-around',
-            evenly: 'justify-evenly',
+            start: "justify-start",
+            center: "justify-center",
+            end: "justify-end",
+            between: "justify-between",
+            around: "justify-around",
+            evenly: "justify-evenly",
         },
         wrap: {
-            true: 'flex-wrap',
-            false: 'flex-nowrap',
+            true: "flex-wrap",
+            false: "flex-nowrap",
         },
     },
     defaultVariants: {
-        direction: 'row',
-        align: 'center',
-        justify: 'start',
+        direction: "row",
+        align: "center",
+        justify: "start",
         wrap: false,
     },
-});
+})
 
 function gapToCssValue(gap: Gap | null | undefined) {
-    if (gap == null) return undefined;
-    if (typeof gap === 'number') return `${gap * 0.25}rem`;
-    return gap;
+    if (gap == null) return undefined
+    if (typeof gap === "number") return `${gap * 0.25}rem`
+    return gap
 }
 
 export interface FlexProps
-    extends Omit<React.HTMLAttributes<HTMLDivElement>, 'style'>,
+    extends Omit<React.HTMLAttributes<HTMLDivElement>, "style">,
         VariantProps<typeof flexVariants> {
-    gap?: Gap;
-    style?: React.CSSProperties;
+    gap?: Gap
+    style?: React.CSSProperties
 }
 
 export const Flex = React.forwardRef<HTMLDivElement, FlexProps>(
@@ -62,5 +62,5 @@ export const Flex = React.forwardRef<HTMLDivElement, FlexProps>(
             {...props}
         />
     ),
-);
-Flex.displayName = 'Flex';
+)
+Flex.displayName = "Flex"

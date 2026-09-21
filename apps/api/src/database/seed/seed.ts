@@ -20,6 +20,7 @@ import {
     examItems,
     examMultipleChoiceAnswerSelections,
     examQuestionCodingConfigs,
+    examQuestionCodingTestCases,
     examQuestionEssayConfigs,
     examQuestionMultipleChoiceChoices,
     examQuestions,
@@ -243,7 +244,12 @@ async function seedExams(createdById: string) {
 }
 
 async function seedAspOnlineExam(professorId: string, users: Array<{ id: string; email: string }>) {
-    const students = users.filter((candidate) => candidate.email !== professorEmail).slice(0, 5);
+    const availableStudents = users.filter((candidate) => candidate.email !== professorEmail);
+    const imran = availableStudents.find((candidate) => candidate.email === studentEmail);
+    const students = [
+        ...(imran ? [imran] : []),
+        ...availableStudents.filter((candidate) => candidate.email !== studentEmail),
+    ].slice(0, 5);
     if (students.length < 5) throw new Error('ASP exam seed requires at least five students');
 
     const itemIds = [
@@ -284,7 +290,7 @@ async function seedAspOnlineExam(professorId: string, users: Array<{ id: string;
             examId: aspExamId,
             location: 'A-101',
             startsAt: new Date(Date.now() - 60 * 60 * 1000),
-            capacity: 5,
+            capacity: 10,
         });
 
         await transaction.insert(examItems).values([
@@ -297,7 +303,19 @@ async function seedAspOnlineExam(professorId: string, users: Array<{ id: string;
             { examItemId: itemIds[1], prompt: 'Explain the invariant maintained by a binary search tree.' },
             {
                 examItemId: itemIds[2],
-                prompt: 'Implement a function that finds the shortest path in a weighted graph.',
+                prompt: `## Shortest path
+
+Implement a function that finds the shortest path in a weighted graph.
+
+- Return the total distance between \`start\` and \`end\`.
+- All edge weights are non-negative.
+- Return \`-1\` when the destination is unreachable.
+
+\`\`\`javascript
+function shortestPath(graph, start, end) {
+  // TODO
+}
+\`\`\``,
             },
         ]);
         await transaction.insert(examQuestions).values([
@@ -315,14 +333,34 @@ async function seedAspOnlineExam(professorId: string, users: Array<{ id: string;
             questionId: questionIds[2],
             language: CodingLanguage.JavaScript,
             mode: 'function',
-            initialCode: 'function shortestPath(graph, start, end) {\\n  // TODO\\n}',
-            solutionCode: 'function shortestPath(graph, start, end) {\\n  return dijkstra(graph, start, end);\\n}',
+            initialCode: 'function shortestPath(graph, start, end) {\n  // TODO\n}',
+            solutionCode: 'function shortestPath(graph, start, end) {\n  return dijkstra(graph, start, end);\n}',
         });
+        await transaction.insert(examQuestionCodingTestCases).values([
+            {
+                questionId: questionIds[2],
+                name: 'Direct edge',
+                input: 'graph = { A: { B: 3 } }, start = A, end = B',
+                expectedOutput: '3',
+                code: 'const graph = { A: { B: 3 } }; shortestPath(graph, "A", "B");',
+                position: 0,
+            },
+            {
+                questionId: questionIds[2],
+                name: 'Two-hop path',
+                input: 'graph = { A: { B: 2 }, B: { C: 4 } }, start = A, end = C',
+                expectedOutput: '6',
+                code: 'const graph = { A: { B: 2 }, B: { C: 4 } }; shortestPath(graph, "A", "C");',
+                position: 1,
+            },
+        ]);
 
         for (const [index, student] of students.entries()) {
             await transaction
                 .insert(examTimeslotRegistrations)
                 .values({ examId: aspExamId, timeslotId, studentId: student.id });
+            if (student.email === studentEmail) continue;
+
             const attemptId = `00000000-0000-4000-8000-000000000${601 + index}`;
             await transaction.insert(examAttempts).values({
                 id: attemptId,
@@ -391,7 +429,7 @@ async function seedAspOnlineExam(professorId: string, users: Array<{ id: string;
         }
     });
     console.log(
-        'Seeded ASP online exam with five attempts, questions, answers, grades, announcement, and timeslot registrations',
+        'Seeded ASP online exam with four attempts, five registrations, questions, answers, grades, and announcement',
     );
 }
 

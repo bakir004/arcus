@@ -40,6 +40,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     const pathname = useRouterState({ select: (state) => state.location.pathname });
     const { isDark } = useTheme();
 
+    const isExamRoute = pathname === '/exams' || pathname.startsWith('/exams/');
+
     return (
         <html lang="en" suppressHydrationWarning>
             <head>
@@ -50,7 +52,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             <body className="antialiased">
                 <QueryClientProvider client={queryClient}>
                     <TooltipProvider>
-                        {pathname === '/login' ? children : <AppShell pathname={pathname}>{children}</AppShell>}
+                        {pathname === '/login' || isExamRoute ? children : <AppShell pathname={pathname}>{children}</AppShell>}
                         <Toaster
                             theme={isDark ? 'dark' : 'light'}
                             toastOptions={{

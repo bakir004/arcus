@@ -70,6 +70,7 @@ export const courseStudentPermissions: Permission[] = [
     Permissions.AssignmentRead,
     Permissions.AssignmentSubmit,
     Permissions.ExamRead,
+    Permissions.AnnouncementRead,
     Permissions.QuestionRead,
     Permissions.AttemptCreate,
     Permissions.AttemptRead,

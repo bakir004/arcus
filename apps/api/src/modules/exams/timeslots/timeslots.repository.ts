@@ -83,14 +83,20 @@ export class TimeslotsRepository {
     }
     async register(examId: string, timeslotId: string, studentId: string) {
         return this.db.transaction(async (tx) => {
-            const slotRows = await tx.execute(
+            const [slot] = (await tx.execute(
                 sql`select * from exam_timeslots where id = ${timeslotId}::uuid and exam_id = ${examId}::uuid for update`,
-            );
-            const slot = slotRows.rows[0] as typeof examTimeslots.$inferSelect | undefined;
+            )) as unknown as [typeof examTimeslots.$inferSelect | undefined];
             if (!slot) throw new NotFoundException('timeslot not found');
-            const existing = await tx.query.examTimeslotRegistrations.findFirst({
-                where: (r, { and, eq }) => and(eq(r.examId, examId), eq(r.studentId, studentId)),
-            });
+            const [existing] = await tx
+                .select({ id: examTimeslotRegistrations.id })
+                .from(examTimeslotRegistrations)
+                .where(
+                    and(
+                        eq(examTimeslotRegistrations.examId, examId),
+                        eq(examTimeslotRegistrations.studentId, studentId),
+                    ),
+                )
+                .limit(1);
             if (existing) throw new ConflictException('student is already registered for this exam');
             const [{ value }] = await tx
                 .select({ value: count() })
