@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, or } from 'drizzle-orm';
 import type { Database } from '@/database/client';
 import { DATABASE } from '@/database/database.module';
 import { exams } from '@/database/schema';
@@ -31,39 +31,52 @@ export class ExamsRepository {
         return rows;
     }
 
-    async findById(courseId: string, id: string): Promise<Exam> {
+    async findById(courseId: string, reference: string): Promise<Exam> {
         const [row] = await this.db
             .select()
             .from(exams)
-            .where(and(eq(exams.courseId, courseId), eq(exams.id, id)))
+            .where(and(
+                eq(exams.courseId, courseId),
+                /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reference)
+                    ? or(eq(exams.slug, reference), eq(exams.id, reference))
+                    : eq(exams.slug, reference),
+            ))
             .limit(1);
 
-        if (!row) throw ExamNotFound(id);
+        if (!row) throw ExamNotFound(reference);
 
         return row;
     }
 
-    async update(courseId: string, id: string, data: ExamUpdate): Promise<Exam> {
+    async update(courseId: string, reference: string, data: ExamUpdate): Promise<Exam> {
+        const exam = await this.findById(courseId, reference);
         const [row] = await this.db
             .update(exams)
             .set({
                 ...data,
                 updatedAt: new Date(),
             })
-            .where(and(eq(exams.courseId, courseId), eq(exams.id, id)))
+            .where(and(eq(exams.courseId, courseId), eq(exams.id, exam.id)))
             .returning();
 
-        if (!row) throw ExamNotFound(id);
+        if (!row) throw ExamNotFound(reference);
 
         return row;
     }
 
-    async delete(courseId: string, id: string): Promise<void> {
+    async delete(courseId: string, reference: string): Promise<void> {
+        const exam = await this.findById(courseId, reference);
         const rows = await this.db
             .delete(exams)
-            .where(and(eq(exams.courseId, courseId), eq(exams.id, id)))
+            .where(and(eq(exams.courseId, courseId), eq(exams.id, exam.id)))
             .returning({ id: exams.id });
 
-        if (rows.length === 0) throw ExamNotFound(id);
+        if (rows.length === 0) throw ExamNotFound(reference);
     }
+
+    /* Kept for callers that need the stable database id behind a URL slug. */
+    async resolveId(courseId: string, reference: string): Promise<string> {
+        return (await this.findById(courseId, reference)).id;
+    }
+
 }

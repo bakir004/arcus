@@ -99,7 +99,7 @@ export function CourseMaterialsPage() {
             <Box className="min-w-0 flex-1">
                 <div className="mb-8 flex flex-wrap items-center gap-3">
                     <Badge variant="secondary">{course.code ?? code}</Badge>
-                    <h1 className="text-3xl font-semibold tracking-tight">{course.name}</h1>
+                    <h1 className="!font-serif m-0 text-[clamp(28px,4vw,40px)] font-normal leading-[1.1] tracking-[-0.01em]">{course.name}</h1>
                 </div>
                 <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
                     <div className="relative w-full max-w-md">

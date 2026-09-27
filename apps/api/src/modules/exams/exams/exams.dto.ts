@@ -6,6 +6,13 @@ const examVisibilities: string[] = [...EXAM_VISIBILITIES];
 
 /** Payload for creating an exam. */
 export class CreateExamDto {
+    /** URL-safe identifier for the exam within its course. */
+    @ApiProperty({ description: 'URL-safe exam slug.', maxLength: 255 })
+    @IsString()
+    @MinLength(1)
+    @MaxLength(255)
+    slug: string;
+
     /** The exam title. */
     @ApiProperty({ description: 'Exam title.', minLength: 1, maxLength: 255 })
     @IsString()
@@ -65,6 +72,10 @@ export class UpdateExamDto extends PartialType(CreateExamDto) {}
 
 /** Exam returned by the API. */
 export class ExamResponseDto {
+    /** URL-safe identifier for the exam within its course. */
+    @ApiProperty({ description: 'URL-safe exam slug.' })
+    slug: string;
+
     /** Unique exam identifier. */
     @ApiProperty({ description: 'Exam id.' })
     id: string;

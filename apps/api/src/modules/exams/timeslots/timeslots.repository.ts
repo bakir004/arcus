@@ -133,6 +133,17 @@ export class TimeslotsRepository {
                 );
         });
     }
+    async resolveExamId(reference: string) {
+        const row = await this.db.query.exams.findFirst({
+            where: (entry, { or, eq }) => /^[0-9a-f-]{36}$/i.test(reference)
+                ? or(eq(entry.id, reference), eq(entry.slug, reference))
+                : eq(entry.slug, reference),
+            columns: { id: true },
+        });
+        if (!row) throw new NotFoundException('exam not found');
+        return row.id;
+    }
+
     async ensureExam(examId: string) {
         const row = await this.db.query.exams.findFirst({ where: eq(exams.id, examId), columns: { id: true } });
         if (!row) throw new NotFoundException('exam not found');

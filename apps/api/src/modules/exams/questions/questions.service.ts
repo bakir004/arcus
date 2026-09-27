@@ -10,7 +10,24 @@ import { getQuestionRepository } from '@/modules/exams/questions/questions.repos
 export class QuestionsService {
     constructor(private readonly questionsRepository: QuestionsRepository) {}
 
+    async listItems(examId: string) {
+        return this.questionsRepository.listItems(await this.questionsRepository.resolveExamId(examId));
+    }
+
+    async createItem(examId: string, dto: import('./exam-items.dto').CreateExamItemDto) {
+        return this.questionsRepository.createItem(await this.questionsRepository.resolveExamId(examId), dto);
+    }
+
+    async updateItem(examId: string, id: string, dto: import('./exam-items.dto').UpdateExamItemDto) {
+        return this.questionsRepository.updateItem(await this.questionsRepository.resolveExamId(examId), id, dto);
+    }
+
+    async deleteItem(examId: string, id: string) {
+        return this.questionsRepository.deleteItem(await this.questionsRepository.resolveExamId(examId), id);
+    }
+
     async create(examId: string, dto: CreateQuestionDto) {
+        examId = await this.questionsRepository.resolveExamId(examId);
         await this.ensureQuestionMutationAllowed(examId);
         const data = createQuestionSchema.parse(dto);
         const optionsError = getQuestionRepository(data.options.type).validateOptions(data.options);
@@ -19,20 +36,24 @@ export class QuestionsService {
     }
 
     async findAllForAuthoring(examId: string) {
+        examId = await this.questionsRepository.resolveExamId(examId);
         return this.questionsRepository.findAllByExam(examId);
     }
 
     async findAll(examId: string) {
+        examId = await this.questionsRepository.resolveExamId(examId);
         return this.questionsRepository
             .findAllByExam(examId)
             .then((questions) => questions.map((question) => this.sanitizeForPublicRead(question)));
     }
 
     async findById(examId: string, id: string) {
+        examId = await this.questionsRepository.resolveExamId(examId);
         return this.questionsRepository.findById(examId, id).then((question) => this.sanitizeForPublicRead(question));
     }
 
     async update(examId: string, id: string, dto: UpdateQuestionDto) {
+        examId = await this.questionsRepository.resolveExamId(examId);
         await this.ensureQuestionMutationAllowed(examId);
         const data = updateQuestionSchema.parse(dto);
         if (data.options) {
@@ -43,11 +64,13 @@ export class QuestionsService {
     }
 
     async reorder(examId: string, dto: ReorderQuestionsDto) {
+        examId = await this.questionsRepository.resolveExamId(examId);
         await this.ensureQuestionMutationAllowed(examId);
         return this.questionsRepository.reorder(examId, dto.questionIds);
     }
 
     async delete(examId: string, id: string) {
+        examId = await this.questionsRepository.resolveExamId(examId);
         await this.ensureQuestionMutationAllowed(examId);
         return this.questionsRepository.delete(examId, id);
     }

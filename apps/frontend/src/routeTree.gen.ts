@@ -27,6 +27,7 @@ import { Route as CoursesCodeSettingsRouteImport } from './routes/courses/$code/
 import { Route as ExamsExamIdIndexRouteImport } from './routes/exams/$examId/index'
 import { Route as ExamsExamIdStartRouteImport } from './routes/exams/$examId/start'
 import { Route as GradingExamsExamIdRouteImport } from './routes/grading/exams/$examId'
+import { Route as CoursesCodeExamsIndexRouteImport } from './routes/courses/$code/exams/index'
 import { Route as ExamsExamIdAttemptsAttemptIdRouteImport } from './routes/exams/$examId/attempts/$attemptId'
 import { Route as CoursesCodeExamsExamIdEditRouteImport } from './routes/courses/$code/exams/$examId/edit'
 import { Route as ExamsExamIdAttemptsAttemptIdIndexRouteImport } from './routes/exams/$examId/attempts/$attemptId/index'
@@ -123,6 +124,11 @@ const GradingExamsExamIdRoute = GradingExamsExamIdRouteImport.update({
   path: '/grading/exams/$examId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CoursesCodeExamsIndexRoute = CoursesCodeExamsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => CoursesCodeExamsRoute,
+} as any)
 const ExamsExamIdAttemptsAttemptIdRoute =
   ExamsExamIdAttemptsAttemptIdRouteImport.update({
     id: '/attempts/$attemptId',
@@ -174,6 +180,7 @@ export interface FileRoutesByFullPath {
   '/courses/$code/': typeof CoursesCodeIndexRoute
   '/exams/$examId/': typeof ExamsExamIdIndexRoute
   '/exams/$examId/attempts/$attemptId': typeof ExamsExamIdAttemptsAttemptIdRouteWithChildren
+  '/courses/$code/exams/': typeof CoursesCodeExamsIndexRoute
   '/courses/$code/exams/$examId/edit': typeof CoursesCodeExamsExamIdEditRoute
   '/exams/$examId/attempts/$attemptId/': typeof ExamsExamIdAttemptsAttemptIdIndexRoute
   '/exams/$examId/attempts/$attemptId/questions/$questionPosition': typeof ExamsExamIdAttemptsAttemptIdQuestionsQuestionPositionRoute
@@ -185,7 +192,6 @@ export interface FileRoutesByTo {
   '/courses/$code/admin': typeof CoursesCodeAdminRoute
   '/courses/$code/analytics': typeof CoursesCodeAnalyticsRoute
   '/courses/$code/assignments': typeof CoursesCodeAssignmentsRoute
-  '/courses/$code/exams': typeof CoursesCodeExamsRouteWithChildren
   '/courses/$code/gradebook': typeof CoursesCodeGradebookRoute
   '/courses/$code/grades': typeof CoursesCodeGradesRoute
   '/courses/$code/materials': typeof CoursesCodeMaterialsRoute
@@ -196,6 +202,7 @@ export interface FileRoutesByTo {
   '/grading/exams/$examId': typeof GradingExamsExamIdRoute
   '/courses/$code': typeof CoursesCodeIndexRoute
   '/exams/$examId': typeof ExamsExamIdIndexRoute
+  '/courses/$code/exams': typeof CoursesCodeExamsIndexRoute
   '/courses/$code/exams/$examId/edit': typeof CoursesCodeExamsExamIdEditRoute
   '/exams/$examId/attempts/$attemptId': typeof ExamsExamIdAttemptsAttemptIdIndexRoute
   '/exams/$examId/attempts/$attemptId/questions/$questionPosition': typeof ExamsExamIdAttemptsAttemptIdQuestionsQuestionPositionRoute
@@ -222,6 +229,7 @@ export interface FileRoutesById {
   '/courses/$code/': typeof CoursesCodeIndexRoute
   '/exams/$examId/': typeof ExamsExamIdIndexRoute
   '/exams/$examId/attempts/$attemptId': typeof ExamsExamIdAttemptsAttemptIdRouteWithChildren
+  '/courses/$code/exams/': typeof CoursesCodeExamsIndexRoute
   '/courses/$code/exams/$examId/edit': typeof CoursesCodeExamsExamIdEditRoute
   '/exams/$examId/attempts/$attemptId/': typeof ExamsExamIdAttemptsAttemptIdIndexRoute
   '/exams/$examId/attempts/$attemptId/questions/$questionPosition': typeof ExamsExamIdAttemptsAttemptIdQuestionsQuestionPositionRoute
@@ -249,6 +257,7 @@ export interface FileRouteTypes {
     | '/courses/$code/'
     | '/exams/$examId/'
     | '/exams/$examId/attempts/$attemptId'
+    | '/courses/$code/exams/'
     | '/courses/$code/exams/$examId/edit'
     | '/exams/$examId/attempts/$attemptId/'
     | '/exams/$examId/attempts/$attemptId/questions/$questionPosition'
@@ -260,7 +269,6 @@ export interface FileRouteTypes {
     | '/courses/$code/admin'
     | '/courses/$code/analytics'
     | '/courses/$code/assignments'
-    | '/courses/$code/exams'
     | '/courses/$code/gradebook'
     | '/courses/$code/grades'
     | '/courses/$code/materials'
@@ -271,6 +279,7 @@ export interface FileRouteTypes {
     | '/grading/exams/$examId'
     | '/courses/$code'
     | '/exams/$examId'
+    | '/courses/$code/exams'
     | '/courses/$code/exams/$examId/edit'
     | '/exams/$examId/attempts/$attemptId'
     | '/exams/$examId/attempts/$attemptId/questions/$questionPosition'
@@ -296,6 +305,7 @@ export interface FileRouteTypes {
     | '/courses/$code/'
     | '/exams/$examId/'
     | '/exams/$examId/attempts/$attemptId'
+    | '/courses/$code/exams/'
     | '/courses/$code/exams/$examId/edit'
     | '/exams/$examId/attempts/$attemptId/'
     | '/exams/$examId/attempts/$attemptId/questions/$questionPosition'
@@ -438,6 +448,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GradingExamsExamIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/courses/$code/exams/': {
+      id: '/courses/$code/exams/'
+      path: '/'
+      fullPath: '/courses/$code/exams/'
+      preLoaderRoute: typeof CoursesCodeExamsIndexRouteImport
+      parentRoute: typeof CoursesCodeExamsRoute
+    }
     '/exams/$examId/attempts/$attemptId': {
       id: '/exams/$examId/attempts/$attemptId'
       path: '/attempts/$attemptId'
@@ -477,10 +494,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface CoursesCodeExamsRouteChildren {
+  CoursesCodeExamsIndexRoute: typeof CoursesCodeExamsIndexRoute
   CoursesCodeExamsExamIdEditRoute: typeof CoursesCodeExamsExamIdEditRoute
 }
 
 const CoursesCodeExamsRouteChildren: CoursesCodeExamsRouteChildren = {
+  CoursesCodeExamsIndexRoute: CoursesCodeExamsIndexRoute,
   CoursesCodeExamsExamIdEditRoute: CoursesCodeExamsExamIdEditRoute,
 }
 

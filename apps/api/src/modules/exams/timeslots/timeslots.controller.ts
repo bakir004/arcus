@@ -40,20 +40,20 @@ export class TimeslotsController {
     @Get()
     @UseGuards(PermissionsGuard)
     @RequirePermission({ scope: 'course', routeParam: 'courseId', permissions: [Permissions.ExamRead] })
-    async list(@Param('examId', ParseUUIDPipe) examId: string, @Session() session: UserSession<typeof auth>) {
+    async list(@Param('examId') examId: string, @Session() session: UserSession<typeof auth>) {
         return (await this.service.list(examId, session?.user.id)).map((slot) => this.response(slot));
     }
     @Post()
     @UseGuards(PermissionsGuard)
     @RequirePermission({ scope: 'course', routeParam: 'courseId', permissions: [Permissions.ExamUpdate] })
-    async create(@Param('examId', ParseUUIDPipe) examId: string, @Body() dto: CreateTimeslotDto) {
+    async create(@Param('examId') examId: string, @Body() dto: CreateTimeslotDto) {
         return this.response(await this.service.create(examId, dto));
     }
     @Patch(':id')
     @UseGuards(PermissionsGuard)
     @RequirePermission({ scope: 'course', routeParam: 'courseId', permissions: [Permissions.ExamUpdate] })
     async update(
-        @Param('examId', ParseUUIDPipe) examId: string,
+        @Param('examId') examId: string,
         @Param('id', ParseUUIDPipe) id: string,
         @Body() dto: UpdateTimeslotDto,
     ) {
@@ -63,7 +63,7 @@ export class TimeslotsController {
     @HttpCode(HttpStatus.NO_CONTENT)
     @UseGuards(PermissionsGuard)
     @RequirePermission({ scope: 'course', routeParam: 'courseId', permissions: [Permissions.ExamUpdate] })
-    remove(@Param('examId', ParseUUIDPipe) examId: string, @Param('id', ParseUUIDPipe) id: string) {
+    remove(@Param('examId') examId: string, @Param('id', ParseUUIDPipe) id: string) {
         return this.service.delete(examId, id);
     }
     @Post(':id/registration')
@@ -71,7 +71,7 @@ export class TimeslotsController {
     @UseGuards(PermissionsGuard)
     @RequirePermission({ scope: 'course', routeParam: 'courseId', permissions: [Permissions.AttemptCreate] })
     register(
-        @Param('examId', ParseUUIDPipe) examId: string,
+        @Param('examId') examId: string,
         @Param('id', ParseUUIDPipe) id: string,
         @Session() session: UserSession<typeof auth>,
     ) {
@@ -82,7 +82,7 @@ export class TimeslotsController {
     @HttpCode(HttpStatus.NO_CONTENT)
     @UseGuards(PermissionsGuard)
     @RequirePermission({ scope: 'course', routeParam: 'courseId', permissions: [Permissions.AttemptCreate] })
-    cancel(@Param('examId', ParseUUIDPipe) examId: string, @Session() session: UserSession<typeof auth>) {
+    cancel(@Param('examId') examId: string, @Session() session: UserSession<typeof auth>) {
         if (!session) throw new UnauthorizedException();
         return this.service.cancel(examId, session.user.id);
     }

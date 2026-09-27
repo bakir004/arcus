@@ -77,7 +77,7 @@ export function CourseExamsPage({ courseId, courseCode }: { courseId: string; co
             await queryClient.invalidateQueries({ queryKey: ["courses", courseId, "exams"] })
             await navigate({
                 to: "/courses/$code/exams/$examId/edit",
-                params: { code: courseCode, examId: exam.id },
+                params: { code: courseCode, examId: exam.slug },
             })
         },
     })
@@ -187,12 +187,12 @@ export function CourseExamsPage({ courseId, courseCode }: { courseId: string; co
                                 to={
                                     canEditExams
                                         ? "/courses/$code/exams/$examId/edit"
-                                        : "/exams/$examId"
+                                        : "/exams/$examId/start"
                                 }
                                 params={
                                     canEditExams
-                                        ? { code: courseCode, examId: exam.id }
-                                        : { examId: exam.id }
+                                        ? { code: courseCode, examId: exam.slug }
+                                        : { examId: exam.slug }
                                 }
                                 className={`block border-b border-border px-5 py-4 transition-colors last:border-b-0 ${canEditExams || exam.type === "online" ? "hover:bg-accent" : "cursor-default"}`}
                                 onClick={

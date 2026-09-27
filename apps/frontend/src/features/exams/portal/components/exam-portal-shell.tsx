@@ -306,7 +306,7 @@ export function ExamPortalShell({
         <ExamContext.Provider value={examContextValue}>
             <Stack className="bg-background h-screen">
                 <ExamNavbar
-                    courseId={exam.courseId}
+                    courseCode={course?.code ?? undefined}
                     courseName={exam.description ?? ""}
                     examName={exam.title}
                     studentName={user?.name ?? "Student"}

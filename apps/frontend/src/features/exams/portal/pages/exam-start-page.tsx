@@ -17,12 +17,13 @@ export function ExamStartPage({ examId }: { examId: string }) {
     const { userId } = useAuth()
     const { data: exam, isLoading: examLoading } = useGetExam(examId)
     const courseId = exam?.courseId
-    const startAttempt = useStartAttempt(courseId, examId)
+    const resolvedExamId = exam?.id ?? ""
+    const startAttempt = useStartAttempt(courseId, resolvedExamId)
     const { data: questions = [], isLoading: questionsLoading } = useGetExamQuestions(
         courseId,
-        examId,
+        resolvedExamId,
     )
-    const { data: attempts = [] } = useGetExamAttempts(courseId, examId, userId)
+    const { data: attempts = [] } = useGetExamAttempts(courseId, resolvedExamId, userId)
 
     const liveAttempt = attempts
         .filter((attempt) => attempt.studentId === userId)
@@ -100,7 +101,7 @@ export function ExamStartPage({ examId }: { examId: string }) {
                             {exam.description}
                         </Text>
                     </Group>
-                    <Heading level={1} size="xl" className="font-serif">
+                    <Heading level={1} size="xl" className="!font-serif">
                         {exam.title}
                     </Heading>
                 </Stack>

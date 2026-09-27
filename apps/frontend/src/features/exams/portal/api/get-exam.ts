@@ -5,7 +5,7 @@ import type { Exam } from "@/features/exams/types"
 
 export const getExamRequest = async (id: string): Promise<Exam> => {
     const exams = await getExamsRequest()
-    const exam = exams.find((item) => item.id === id)
+    const exam = exams.find((item) => item.id === id || item.slug === id)
     if (!exam) throw new Error("Exam not found")
     return exam
 }

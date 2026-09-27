@@ -271,6 +271,7 @@ async function seedAspOnlineExam(professorId: string, users: Array<{ id: string;
             id: aspExamId,
             courseId: '00000000-0000-4000-8000-000000000003',
             createdById: professorId,
+            slug: 'asp-online-exam',
             title: 'ASP Online Exam',
             description: 'Algorithms and Data Structures assessment',
             type: ExamType.Online,

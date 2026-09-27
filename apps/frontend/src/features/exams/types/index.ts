@@ -97,6 +97,7 @@ export interface Exam {
     id: string
     courseId: string
     createdById: string
+    slug: string
     title: string
     description: string | null
     type: ExamType
@@ -138,6 +139,17 @@ export interface ExamAnswer {
 
 export interface ExamAttemptWithAnswers extends ExamAttempt {
     answers: ExamAnswer[]
+}
+
+export interface ExamItem {
+    id: string
+    examId: string
+    position: number
+    label: string | null
+    maxPoints: string
+    prompt: string | null
+    createdAt: string
+    updatedAt: string
 }
 
 export interface ExamQuestion {

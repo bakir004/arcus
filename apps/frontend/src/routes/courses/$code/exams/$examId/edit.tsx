@@ -13,5 +13,5 @@ export const Route = createFileRoute("/courses/$code/exams/$examId/edit")({
 function EditExamRoute() {
     const { examId } = Route.useParams()
     const { course } = Route.useLoaderData()
-    return <ExamBuilderPage courseId={course.id} examId={examId} />
+    return <ExamBuilderPage courseId={course.id} courseCode={Route.useParams().code} examId={examId} />
 }

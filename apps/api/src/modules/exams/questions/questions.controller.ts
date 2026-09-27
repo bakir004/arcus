@@ -30,6 +30,7 @@ import {
     ReorderQuestionsDto,
     UpdateQuestionDto,
 } from '@/modules/exams/questions/questions.dto';
+import { CreateExamItemDto, UpdateExamItemDto } from '@/modules/exams/questions/exam-items.dto';
 import type { Question } from '@/modules/exams/questions/questions.entity';
 import { QuestionsService } from '@/modules/exams/questions/questions.service';
 
@@ -46,6 +47,23 @@ export class QuestionsController {
         };
     }
 
+    @Get('items')
+    @RequirePermission({ scope: 'course', routeParam: 'courseId', permissions: [Permissions.QuestionRead] })
+    listItems(@Param('examId') examId: string) { return this.questionsService.listItems(examId); }
+
+    @Post('items')
+    @RequirePermission({ scope: 'course', routeParam: 'courseId', permissions: [Permissions.QuestionCreate] })
+    createItem(@Param('examId') examId: string, @Body() dto: CreateExamItemDto) { return this.questionsService.createItem(examId, dto); }
+
+    @Patch('items/:id')
+    @RequirePermission({ scope: 'course', routeParam: 'courseId', permissions: [Permissions.QuestionUpdate] })
+    updateItem(@Param('examId') examId: string, @Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateExamItemDto) { return this.questionsService.updateItem(examId, id, dto); }
+
+    @Delete('items/:id')
+    @HttpCode(HttpStatus.NO_CONTENT)
+    @RequirePermission({ scope: 'course', routeParam: 'courseId', permissions: [Permissions.QuestionDelete] })
+    deleteItem(@Param('examId') examId: string, @Param('id', ParseUUIDPipe) id: string) { return this.questionsService.deleteItem(examId, id); }
+
     @ApiOperation({ summary: 'Add a question to an exam' })
     @ApiCreatedResponse({ type: QuestionResponseDto })
     @ApiBadRequestResponse({ type: ErrorDto })
@@ -56,7 +74,7 @@ export class QuestionsController {
         permissions: [Permissions.QuestionCreate],
     })
     async create(
-        @Param('examId', ParseUUIDPipe) examId: string,
+        @Param('examId') examId: string,
         @Body() dto: CreateQuestionDto,
     ): Promise<QuestionResponseDto> {
         const question = await this.questionsService.create(examId, dto);
@@ -71,7 +89,7 @@ export class QuestionsController {
         routeParam: 'courseId',
         permissions: [Permissions.QuestionUpdate],
     })
-    async findAllForAuthoring(@Param('examId', ParseUUIDPipe) examId: string): Promise<QuestionResponseDto[]> {
+    async findAllForAuthoring(@Param('examId') examId: string): Promise<QuestionResponseDto[]> {
         const questions = await this.questionsService.findAllForAuthoring(examId);
         return questions.map((question) => this.toResponse(question));
     }
@@ -86,7 +104,7 @@ export class QuestionsController {
         routeParam: 'courseId',
         permissions: [Permissions.QuestionRead],
     })
-    async findAll(@Param('examId', ParseUUIDPipe) examId: string): Promise<QuestionResponseDto[]> {
+    async findAll(@Param('examId') examId: string): Promise<QuestionResponseDto[]> {
         const questions = await this.questionsService.findAll(examId);
         return questions.map((question) => this.toResponse(question));
     }
@@ -102,7 +120,7 @@ export class QuestionsController {
         permissions: [Permissions.QuestionRead],
     })
     async findById(
-        @Param('examId', ParseUUIDPipe) examId: string,
+        @Param('examId') examId: string,
         @Param('id', ParseUUIDPipe) id: string,
     ): Promise<QuestionResponseDto> {
         const question = await this.questionsService.findById(examId, id);
@@ -118,7 +136,7 @@ export class QuestionsController {
         permissions: [Permissions.QuestionUpdate],
     })
     async reorder(
-        @Param('examId', ParseUUIDPipe) examId: string,
+        @Param('examId') examId: string,
         @Body() dto: ReorderQuestionsDto,
     ): Promise<QuestionResponseDto[]> {
         const questions = await this.questionsService.reorder(examId, dto);
@@ -140,7 +158,7 @@ export class QuestionsController {
         permissions: [Permissions.QuestionUpdate],
     })
     async update(
-        @Param('examId', ParseUUIDPipe) examId: string,
+        @Param('examId') examId: string,
         @Param('id', ParseUUIDPipe) id: string,
         @Body() dto: UpdateQuestionDto,
     ): Promise<QuestionResponseDto> {
@@ -158,7 +176,7 @@ export class QuestionsController {
         routeParam: 'courseId',
         permissions: [Permissions.QuestionDelete],
     })
-    remove(@Param('examId', ParseUUIDPipe) examId: string, @Param('id', ParseUUIDPipe) id: string) {
+    remove(@Param('examId') examId: string, @Param('id', ParseUUIDPipe) id: string) {
         return this.questionsService.delete(examId, id);
     }
 }

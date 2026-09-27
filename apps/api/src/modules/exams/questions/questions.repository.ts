@@ -37,6 +37,45 @@ type QuestionRow = typeof examQuestions.$inferSelect & {
 export class QuestionsRepository {
     constructor(@Inject(DATABASE) private readonly db: Database) {}
 
+    async listItems(examId: string) {
+        const rows = await this.db.select({ item: examItems, prompt: examItemStatements.prompt })
+            .from(examItems)
+            .leftJoin(examItemStatements, eq(examItemStatements.examItemId, examItems.id))
+            .where(eq(examItems.examId, examId)).orderBy(asc(examItems.position));
+        return rows.map(({ item, prompt }) => ({ ...item, prompt: prompt ?? null }));
+    }
+
+    async createItem(examId: string, data: { position: number; maxPoints: number; label?: string | null; prompt?: string }) {
+        const exam = await this.db.query.exams.findFirst({ where: (entry, { eq }) => eq(entry.id, examId), columns: { type: true } });
+        if (data.prompt && exam?.type !== 'online') throw new Error('Problem statements are only available for online exams');
+        return this.db.transaction(async (tx) => {
+            const { prompt, ...itemData } = data;
+            const [item] = await tx.insert(examItems).values({ ...itemData, maxPoints: String(data.maxPoints), examId }).returning();
+            if (data.prompt) await tx.insert(examItemStatements).values({ examItemId: item.id, prompt: data.prompt });
+            return { ...item, prompt: data.prompt ?? null };
+        });
+    }
+
+    async updateItem(examId: string, id: string, data: { position?: number; maxPoints?: number; label?: string | null; prompt?: string | null }) {
+        const exam = await this.db.query.exams.findFirst({ where: (entry, { eq }) => eq(entry.id, examId), columns: { type: true } });
+        if (data.prompt && exam?.type !== 'online') throw new Error('Problem statements are only available for online exams');
+        return this.db.transaction(async (tx) => {
+            const { prompt, ...itemData } = data;
+            const [item] = await tx.update(examItems).set({ ...itemData, ...(data.maxPoints !== undefined && { maxPoints: String(data.maxPoints) }), updatedAt: new Date() }).where(and(eq(examItems.id, id), eq(examItems.examId, examId))).returning();
+            if (!item) throw QuestionNotFound(id);
+            if (data.prompt !== undefined) {
+                if (data.prompt === null) await tx.delete(examItemStatements).where(eq(examItemStatements.examItemId, id));
+                else await tx.insert(examItemStatements).values({ examItemId: id, prompt: data.prompt }).onConflictDoUpdate({ target: examItemStatements.examItemId, set: { prompt: data.prompt } });
+            }
+            return { ...item, prompt: data.prompt ?? null };
+        });
+    }
+
+    async deleteItem(examId: string, id: string) {
+        const [item] = await this.db.delete(examItems).where(and(eq(examItems.id, id), eq(examItems.examId, examId))).returning({ id: examItems.id });
+        if (!item) throw QuestionNotFound(id);
+    }
+
     create(examId: string, data: QuestionCreate): Promise<Question> {
         return this.db.transaction(async (tx) => {
             const [item] = await tx
@@ -160,6 +199,17 @@ export class QuestionsRepository {
         const rows = await this.findRows(this.db, examId, id);
         if (!rows[0]) throw QuestionNotFound(id);
         await this.db.delete(examItems).where(eq(examItems.id, rows[0].examItemId));
+    }
+
+    async resolveExamId(reference: string): Promise<string> {
+        const exam = await this.db.query.exams.findFirst({
+            where: (entry, { or, eq }) => /^[0-9a-f-]{36}$/i.test(reference)
+                ? or(eq(entry.id, reference), eq(entry.slug, reference))
+                : eq(entry.slug, reference),
+            columns: { id: true },
+        });
+        if (!exam) throw ExamNotFound(reference);
+        return exam.id;
     }
 
     async ensureExamExists(examId: string): Promise<void> {

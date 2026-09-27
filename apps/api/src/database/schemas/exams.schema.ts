@@ -27,6 +27,7 @@ export const exams = pgTable(
             .notNull()
             .references(() => user.id, { onDelete: 'restrict' }),
         title: varchar('title', { length: 255 }).notNull(),
+        slug: varchar('slug', { length: 255 }).notNull(),
         description: text('description'),
         type: examTypeEnum('type').notNull().default(ExamType.Written),
         durationMinutes: smallint('duration_minutes').notNull(),
@@ -35,7 +36,11 @@ export const exams = pgTable(
         createdAt: timestamp('created_at').defaultNow().notNull(),
         updatedAt: timestamp('updated_at').defaultNow().notNull(),
     },
-    (t) => [index('exams_course_id_idx').on(t.courseId), index('exams_created_by_id_idx').on(t.createdById)],
+    (t) => [
+        index('exams_course_id_idx').on(t.courseId),
+        index('exams_created_by_id_idx').on(t.createdById),
+        unique('exams_course_slug_uniq').on(t.courseId, t.slug),
+    ],
 );
 
 /** A gradeable slot. Content and student work are optional. */

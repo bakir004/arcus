@@ -5,6 +5,7 @@ export const createDraftExamRequest = (courseId: string, type: ExamType = ExamTy
     apiClient<Exam>(`/courses/${courseId}/exams`, {
         method: "POST",
         body: {
+            slug: `untitled-exam-${Date.now()}`,
             title: "Untitled exam",
             description: null,
             type,

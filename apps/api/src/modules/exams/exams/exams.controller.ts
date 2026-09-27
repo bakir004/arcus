@@ -89,7 +89,7 @@ export class ExamsController {
     })
     async findById(
         @Param('courseId', ParseUUIDPipe) courseId: string,
-        @Param('id', ParseUUIDPipe) id: string,
+        @Param('id') id: string,
     ): Promise<ExamResponseDto> {
         const exam = await this.examsService.findById(courseId, id);
         return this.toResponse(exam);
@@ -107,7 +107,7 @@ export class ExamsController {
     })
     async update(
         @Param('courseId', ParseUUIDPipe) courseId: string,
-        @Param('id', ParseUUIDPipe) id: string,
+        @Param('id') id: string,
         @Body() dto: UpdateExamDto,
     ): Promise<ExamResponseDto> {
         const exam = await this.examsService.update(courseId, id, dto);
@@ -125,7 +125,7 @@ export class ExamsController {
         routeParam: 'courseId',
         permissions: [Permissions.ExamDelete],
     })
-    remove(@Param('courseId', ParseUUIDPipe) courseId: string, @Param('id', ParseUUIDPipe) id: string) {
+    remove(@Param('courseId', ParseUUIDPipe) courseId: string, @Param('id') id: string) {
         return this.examsService.delete(courseId, id);
     }
 }

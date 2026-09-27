@@ -18,7 +18,7 @@ import { useOnlineStatus } from "@/hooks/use-online-status"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 interface ExamNavbarProps {
-    courseId?: string
+    courseCode?: string
     courseName: string
     examName: string
     studentName: string
@@ -59,7 +59,7 @@ function formatTime(seconds: number): string {
 const LOW_TIME_THRESHOLD_SECONDS = 300
 
 export function ExamNavbar({
-    courseId,
+    courseCode,
     examName,
     studentName,
     studentCode,
@@ -119,7 +119,7 @@ export function ExamNavbar({
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => courseId && navigate({ to: "/courses/$code/exams", params: { code: courseId } })}
+                        onClick={() => courseCode && navigate({ to: "/courses/$code/exams", params: { code: courseCode } })}
                         className="text-muted-foreground hover:text-foreground"
                     >
                         <ChevronLeft className="size-4" />

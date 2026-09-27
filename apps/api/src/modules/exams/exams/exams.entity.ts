@@ -13,6 +13,7 @@ export const examSchema = z.object({
     id: z.uuid(),
     courseId: z.uuid(),
     createdById: z.string().trim().min(1),
+    slug: z.string().trim().min(1).max(255),
     title: z.string().trim().min(1).max(255),
     description: z
         .string()
@@ -33,6 +34,7 @@ export const examSchema = z.object({
 });
 
 export const createExamSchema = z.object({
+    slug: z.string().trim().min(1).max(255),
     title: z.string().trim().min(1).max(255),
     description: z
         .string()

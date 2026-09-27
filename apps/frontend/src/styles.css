@@ -11,14 +11,6 @@
     src: url("./assets/fonts/Outfit-VariableFont_wght.woff2") format("woff2-variations");
 }
 
-@font-face {
-    font-family: "Merriweather";
-    font-style: normal;
-    font-weight: 300 900;
-    font-stretch: 75% 125%;
-    font-display: swap;
-    src: url("./assets/fonts/Merriweather-VariableFont_opsz,wdth,wght.ttf") format("truetype");
-}
 @plugin "tailwindcss-animate";
 
 @custom-variant dark (&:is(.dark *));
@@ -68,7 +60,7 @@ button {
     --warning: oklch(0.7686 0.1647 70.0804);
     --warning-foreground: oklch(0.2 0 0);
     --font-sans: Outfit, ui-sans-serif, sans-serif, system-ui;
-    --font-serif: Merriweather, ui-serif, serif;
+    --font-serif: Newsreader, ui-serif, serif;
     --font-mono: Source Code Pro, ui-monospace, monospace;
     --shadow-color: oklch(0 0 0);
     --shadow-opacity: 0.1;
@@ -92,6 +84,7 @@ button {
 @theme inline {
     --font-heading: var(--font-sans);
     --font-sans: Outfit, ui-sans-serif, sans-serif, system-ui;
+    --font-serif: Newsreader, ui-serif, serif;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -131,7 +124,7 @@ button {
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
     --font-mono: Source Code Pro, ui-monospace, monospace;
-    --font-serif: Merriweather, ui-serif, serif;
+    --font-serif: Newsreader, ui-serif, serif;
     --radius: 0.5rem;
     --tracking-tighter: calc(var(--tracking-normal) - 0.05em);
     --tracking-tight: calc(var(--tracking-normal) - 0.025em);
@@ -201,7 +194,7 @@ button {
     --warning: oklch(0.821 0.1647 70.0804);
     --warning-foreground: oklch(0.2 0 0);
     --font-sans: Outfit, ui-sans-serif, sans-serif, system-ui;
-    --font-serif: Merriweather, ui-serif, serif;
+    --font-serif: Newsreader, ui-serif, serif;
     --font-mono: Source Code Pro, ui-monospace, monospace;
 }
 
