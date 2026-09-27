@@ -25,22 +25,26 @@ interface ExamPortalPageProps {
 export function ExamPortalPage({ examId, attemptId }: ExamPortalPageProps) {
     const { userId, isLoading: authLoading } = useAuth()
     const { data: exam, isLoading: examLoading } = useGetExam(examId)
-    const courseId = exam?.courseId
-    const { data: questions = [], isLoading: questionsLoading } = useGetExamQuestions(
-        courseId,
-        examId,
-    )
-    const { data: announcements = [] } = useGetExamAnnouncements(courseId, examId)
-    const {
-        data: attempt,
-        isLoading: attemptLoading,
-        isError: attemptError,
-    } = useGetAttempt(courseId, examId, attemptId)
 
     const [cachedExam, setCachedExam] = React.useState<Exam | null>(null)
     const [cachedQuestions, setCachedQuestions] = React.useState<ExamQuestion[]>([])
     const [cachedAnnouncements, setCachedAnnouncements] = React.useState<ExamAnnouncement[]>([])
     const [cacheLoaded, setCacheLoaded] = React.useState(false)
+
+    const resolvedExam = exam ?? cachedExam
+    const courseId = resolvedExam?.courseId
+    // The public route may contain an exam slug, while nested API routes require the UUID.
+    const resolvedExamId = resolvedExam?.id ?? ""
+    const { data: questions = [], isLoading: questionsLoading } = useGetExamQuestions(
+        courseId,
+        resolvedExamId,
+    )
+    const { data: announcements = [] } = useGetExamAnnouncements(courseId, resolvedExamId)
+    const {
+        data: attempt,
+        isLoading: attemptLoading,
+        isError: attemptError,
+    } = useGetAttempt(courseId, resolvedExamId, attemptId)
 
     const [resolvedAttemptId] = React.useState(attemptId)
 
@@ -69,7 +73,6 @@ export function ExamPortalPage({ examId, attemptId }: ExamPortalPageProps) {
         })()
     }, [examId])
 
-    const resolvedExam = exam ?? cachedExam
     const resolvedQuestions = questions.length > 0 ? questions : cachedQuestions
     const resolvedAnnouncements = announcements.length > 0 ? announcements : cachedAnnouncements
 
@@ -153,7 +156,7 @@ export function ExamPortalPage({ examId, attemptId }: ExamPortalPageProps) {
 
     return (
         <ExamPortalShell
-            examId={examId}
+            examId={resolvedExam.id}
             attemptId={resolvedAttemptId}
             exam={resolvedExam}
             attempt={attempt}

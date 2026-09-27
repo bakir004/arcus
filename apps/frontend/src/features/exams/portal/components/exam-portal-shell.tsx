@@ -242,7 +242,7 @@ export function ExamPortalShell({
         navigate({
             to: "/exams/$examId/attempts/$attemptId/questions/$questionPosition",
             params: {
-                examId,
+                examId: exam.slug,
                 attemptId,
                 questionPosition: String(next.number),
             },
